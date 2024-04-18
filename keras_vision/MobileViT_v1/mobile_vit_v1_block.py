@@ -96,7 +96,7 @@ def unfolding(
         [13, 14, 15, 16],           [6, 8, 14, 16]
     ]                            ]
     """
-    print("B", B)
+    # print("B", B)
     # [B, H, W, D] --> [B*nh, ph, nw, pw*D]
     reshaped_fm = kops.reshape(x, (B * num_patches_h, patch_h, num_patches_w, patch_w * D))
 
@@ -188,7 +188,7 @@ class MobileViT_v1_Block(Layer):
         self.fuse_local_global = ConvLayer(num_filters=self.out_filters, kernel_size=3, strides=1, use_bn=True, use_activation=True)
 
     def call(self, x):
-        print("x.shape", kops.shape(x), x.shape)
+        # print("x.shape", kops.shape(x), x.shape)
         # local_representation = self.local_rep(x)
         local_representation = self.local_rep_layer_1(x)
         local_representation = self.local_rep_layer_2(local_representation)

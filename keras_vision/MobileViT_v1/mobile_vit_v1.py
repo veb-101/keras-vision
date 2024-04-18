@@ -1,7 +1,7 @@
-import os
+# import os
 
-# This guide can only be run with the jax backend.
-os.environ["KERAS_BACKEND"] = "jax"
+# # This guide can only be run with the jax backend.
+# os.environ["KERAS_BACKEND"] = "jax"
 
 from typing import Optional
 
@@ -9,9 +9,9 @@ import keras.ops as kops
 from keras import Model, Input
 from keras.layers import GlobalAveragePooling2D, Dropout, Dense
 
-from configs import get_mobile_vit_v1_configs
-from BaseLayers import ConvLayer, InvertedResidualBlock
-from mobile_vit_v1_block import MobileViT_v1_Block
+from .configs import get_mobile_vit_v1_configs
+from .BaseLayers import ConvLayer, InvertedResidualBlock
+from .mobile_vit_v1_block import MobileViT_v1_Block
 
 
 def MobileViT_v1(
@@ -101,8 +101,6 @@ def MobileViT_v1(
         name="block-3-IR1",
     )(out)
 
-    print("kops.shape(out)", kops.shape(out))
-
     out = MobileViT_v1_Block(
         out_filters=configs.block_3_2_dims,
         embedding_dim=configs.tf_block_3_dims,
@@ -121,14 +119,14 @@ def MobileViT_v1(
         name="block-4-IR1",
     )(out)
 
-    # out = MobileViT_v1_Block(
-    #     out_filters=configs.block_4_2_dims,
-    #     embedding_dim=configs.tf_block_4_dims,
-    #     transformer_repeats=configs.tf_block_4_repeats,
-    #     name="MobileViTBlock-2",
-    #     attention_drop=attention_drop,
-    #     linear_drop=linear_drop,
-    # )(out)
+    out = MobileViT_v1_Block(
+        out_filters=configs.block_4_2_dims,
+        embedding_dim=configs.tf_block_4_dims,
+        transformer_repeats=configs.tf_block_4_repeats,
+        name="MobileViTBlock-2",
+        attention_drop=attention_drop,
+        linear_drop=linear_drop,
+    )(out)
 
     # Block 5
     out = InvertedResidualBlock(
@@ -139,14 +137,14 @@ def MobileViT_v1(
         name="block-5-IR1",
     )(out)
 
-    # out = MobileViT_v1_Block(
-    #     out_filters=configs.block_5_2_dims,
-    #     embedding_dim=configs.tf_block_5_dims,
-    #     transformer_repeats=configs.tf_block_5_repeats,
-    #     name="MobileViTBlock-3",
-    #     attention_drop=attention_drop,
-    #     linear_drop=linear_drop,
-    # )(out)
+    out = MobileViT_v1_Block(
+        out_filters=configs.block_5_2_dims,
+        embedding_dim=configs.tf_block_5_dims,
+        transformer_repeats=configs.tf_block_5_repeats,
+        name="MobileViTBlock-3",
+        attention_drop=attention_drop,
+        linear_drop=linear_drop,
+    )(out)
 
     out = ConvLayer(num_filters=configs.final_conv_dims, kernel_size=1, strides=1)(out)
 
@@ -190,53 +188,21 @@ def build_MobileViT_v1(
         attention_drop: (float) Dropout rate for the attention matrix
 
     """
-    # model_type = model_type.upper()
+    model_type = model_type.upper()
 
-    # if model_type not in ("S", "XS", "XXS"):
-    #     raise ValueError("Bad Input. 'model_type' should one of ['S', 'XS', 'XXS']")
+    if model_type not in ("S", "XS", "XXS"):
+        raise ValueError("Bad Input. 'model_type' should one of ['S', 'XS', 'XXS']")
 
-    # updated_configs = get_mobile_vit_v1_configs(model_type, updates=updates)
+    updated_configs = get_mobile_vit_v1_configs(model_type, updates=updates)
 
-    # model = MobileViT_v1(
-    #     configs=updated_configs,
-    #     num_classes=num_classes,
-    #     input_shape=input_shape,
-    #     model_name=f"MobileViT_v1-{model_type}",
-    #     **kwargs,
-    # )
+    model = MobileViT_v1(
+        configs=updated_configs,
+        num_classes=num_classes,
+        input_shape=input_shape,
+        model_name=f"MobileViT_v1-{model_type}",
+        **kwargs,
+    )
 
-    # Assuming configs.block_3_2_dims, configs.tf_block_3_dims, and configs.tf_block_3_repeats are properly defined
-
-    from keras.layers import Input
-
-    # Define input shape
-    input_shape = (32, 32, 96)  # Assuming input shape is (32, 32, 96), adjust as necessary
-
-    # Create input layer
-    inputs = Input(shape=input_shape)
-
-    # # Initialize model with input layer
-    # mvitblk = MobileViT_v1_Block(
-    #     out_filters=96,
-    #     embedding_dim=144,
-    #     patch_size=P,
-    #     transformer_repeats=2,
-    #     name="MobileViTBlock-1",
-    #     attention_drop=0.2,
-    #     linear_drop=0.2,
-    # )(inputs)
-    print("inputs.shape", inputs.shape)
-    mvitblk = MobileViT_v1_Block(
-        out_filters=96,
-        embedding_dim=144,
-        transformer_repeats=2,
-        name="MobileViTBlock-1",
-        attention_drop=0.2,
-        linear_drop=0.2,
-    )(inputs)
-
-    # Create model
-    model = Model(inputs=inputs, outputs=mvitblk)
 
     # Print model summary
     model.summary()
