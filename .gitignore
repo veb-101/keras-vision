@@ -1,8 +1,5 @@
-keras_vision.egg-info/dependency_links.txt
-keras_vision.egg-info/PKG-INFO
-keras_vision.egg-info/requires.txt
-keras_vision.egg-info/SOURCES.txt
-keras_vision.egg-info/top_level.txt
-dist/keras_vision-0.1-py3-none-any.whl
-dist/keras-vision-0.1.tar.gz
+keras_vision.egg-info/*
+dist/*
 *.pyc
+testing.py
+build/*
