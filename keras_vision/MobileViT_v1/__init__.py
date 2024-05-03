@@ -1,4 +1,4 @@
-from keras_vision.MobileViT_v1.BaseLayers import ConvLayer, InvertedResidualBlock
+from keras_vision.MobileViT_v1.base_layers import ConvLayer, InvertedResidualBlock
 from keras_vision.MobileViT_v1 import multihead_self_attention_2D
 from keras_vision.MobileViT_v1.mobile_vit_v1_block import Transformer, MobileViT_v1_Block
 
