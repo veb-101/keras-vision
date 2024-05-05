@@ -12,7 +12,7 @@ from .base_layers import ConvLayer, InvertedResidualBlock
 from .mobile_vit_v1_block import MobileViT_v1_Block
 
 VERSION = 0.4
-WEIGHTS_URL = "https://github.com/veb-101/keras-vision/releases/download/{version}/keras_MobileVIT_v1_model_{model_type}.weights.h5"
+WEIGHTS_URL = "https://github.com/veb-101/keras-vision/releases/download/v{version}/keras_MobileVIT_v1_model_{model_type}.weights.h5"
 
 
 def MobileViT_v1(
