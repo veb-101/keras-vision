@@ -1,12 +1,18 @@
+import warnings
 from typing import Optional
+
 
 import keras.ops as kops
 from keras import Model, Input
 from keras.layers import GlobalAveragePooling2D, Dropout, Dense
+from keras.utils import get_file
 
 from .configs import get_mobile_vit_v1_configs
 from .base_layers import ConvLayer, InvertedResidualBlock
 from .mobile_vit_v1_block import MobileViT_v1_Block
+
+VERSION = 0.4
+WEIGHTS_URL = "https://github.com/veb-101/keras-vision/releases/download/{version}/keras_MobileVIT_v1_model_{model_type}.weights.h5"
 
 
 def MobileViT_v1(
@@ -14,7 +20,7 @@ def MobileViT_v1(
     dropout: float = 0.1,
     linear_drop: float = 0.0,
     attention_drop: float = 0.0,
-    num_classes: int = 1000,
+    num_classes: int | None = 1000,
     input_shape: tuple[int, int, int] = (256, 256, 3),
     model_name: str = f"MobileViT_v1-S",
 ):
@@ -136,15 +142,16 @@ def MobileViT_v1(
         linear_drop=linear_drop,
     )(out)
 
-    out = ConvLayer(num_filters=configs.final_conv_dims, kernel_size=1, strides=1)(out)
+    out = ConvLayer(num_filters=configs.final_conv_dims, kernel_size=1, strides=1, name="final_conv")(out)
 
-    # Output layer
-    out = GlobalAveragePooling2D()(out)
+    if num_classes:
+        # Output layer
+        out = GlobalAveragePooling2D()(out)
 
-    if linear_drop > 0.0:
-        out = Dropout(rate=dropout)(out)
+        if linear_drop > 0.0:
+            out = Dropout(rate=dropout)(out)
 
-    out = Dense(units=num_classes)(out)
+        out = Dense(units=num_classes)(out)
 
     model = Model(inputs=input_layer, outputs=out, name=model_name)
 
@@ -155,40 +162,61 @@ def build_MobileViT_v1(
     model_type: str = "S",
     num_classes: int = 1000,
     input_shape: tuple = (256, 256, 3),
+    include_top: bool = True,  # Whether to include the classification layer in the model
+    pretrained: bool = False,  # Whether to load pretrained weights
+    cache_dir: Optional[str] = None,  # Local cache directory for weights
     updates: Optional[dict] = None,
     **kwargs,
 ):
     """
-    Create MobileViT-v1 Classification models
+    Create MobileViT-v1 Classification models or feature extractors with optional pretrained weights.
 
-    Arguments
-    --------
-        model_type: (str)   MobileViT version to create. Options: S, XS, XSS
+    Arguments:
+    ---------
+        model_type: (str)   MobileViT version to create. Options: S, XS, XXS
         num_classes: (int)   Number of output classes
         input_shape: (tuple) Input shape -> H, W, C
+        include_top: (bool) Whether to include the classification layers
+        pretrained: (bool) Whether to load pretrained weights
+        cache_dir: (str) Local directory to cache the downloaded weights
         updates: (dict) a key-value pair indicating the changes to be made to the base model.
 
     Additional arguments:
     ---------------------
         linear_drop: (float) Dropout rate for Dense layers
         attention_drop: (float) Dropout rate for the attention matrix
-
     """
     model_type = model_type.upper()
-
     if model_type not in ("S", "XS", "XXS"):
-        raise ValueError("Bad Input. 'model_type' should one of ['S', 'XS', 'XXS']")
+        raise ValueError("Bad Input. 'model_type' should be one of ['S', 'XS', 'XXS']")
 
     updated_configs = get_mobile_vit_v1_configs(model_type, updates=updates)
 
+    # Build the base model
     model = MobileViT_v1(
         configs=updated_configs,
-        num_classes=num_classes,
+        num_classes=num_classes if include_top else None,
         input_shape=input_shape,
         model_name=f"MobileViT_v1-{model_type}",
         **kwargs,
     )
-    # model.summary()
+
+    if pretrained:
+
+        weights_path = get_file(
+            fname=f"keras_MobileVIT_v1_model_{model_type}.weights.h5",
+            origin=WEIGHTS_URL.format(version=VERSION, model_type=model_type),
+            cache_subdir="models",
+            hash_algorithm="auto",
+            extract=False,
+            archive_format="auto",
+            cache_dir=cache_dir,
+        )
+
+        with warnings.catch_warnings():
+            # Ignore UserWarnings within this block
+            warnings.simplefilter("ignore", UserWarning)
+            model.load_weights(weights_path, skip_mismatch=True)
 
     return model
 

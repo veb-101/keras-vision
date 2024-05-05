@@ -120,69 +120,6 @@ class Transformer(Layer):
 #     return transposed_fm
 
 
-# def unfolding(feature_map, patch_w, patch_h):
-#     # Initially convert channel-last to channel-first for processing
-#     feature_map = kops.transpose(feature_map, [0, 3, 1, 2])  # [B, H, W, C] -> [B, C, H, W]
-
-#     patch_area = patch_w * patch_h
-
-#     # batch_size, in_channels, orig_h, orig_w = feature_map.shape
-#     shape = kops.shape(feature_map)
-#     batch_size, in_channels, orig_h, orig_w = shape[0], shape[1], shape[2], shape[3]
-
-#     orig_h, orig_w = kops.cast(orig_h, dtype="int32"), kops.cast(orig_w, dtype="int32")
-
-#     a = kops.ceil(orig_h / patch_h)
-#     b = kops.ceil(orig_w / patch_w)
-
-#     new_h = kops.cast(a * kops.cast(patch_h, dtype=a.dtype), dtype="int32")
-#     new_w = kops.cast(b * kops.cast(patch_w, dtype=a.dtype), dtype="int32")
-
-#     def resize_image():
-#         feature_map = kops.image.resize(feature_map.transpose(0, 2, 3, 1), [new_h, new_w], data_format="channels_last")
-#         return feature_map.transpose(0, 3, 1, 2)
-
-#     def return_original():
-#         return feature_map
-
-#     # feature_map = kops.image.resize(feature_map, [new_h, new_w], data_format="channels_first")
-
-#     # Condition to decide if resizing is necessary
-#     feature_map = kops.cond(
-#         kops.logical_or(kops.not_equal(new_w, orig_w), kops.not_equal(new_h, orig_h)),
-#         true_fn=resize_image,
-#         false_fn=return_original,
-#     )
-
-#     num_patch_w = new_w // patch_w
-#     num_patch_h = new_h // patch_h
-#     num_patches = num_patch_h * num_patch_w
-
-#     # Handle dynamic shape multiplication
-#     dynamic_shape_mul = kops.prod([batch_size, in_channels * num_patch_h])
-
-#     # Reshape and transpose to create patches
-#     reshaped_fm = kops.reshape(feature_map, [dynamic_shape_mul, patch_h, num_patch_w, patch_w])
-#     print("hereeee")
-#     transposed_fm = kops.transpose(reshaped_fm, [0, 2, 1, 3])
-#     reshaped_fm = kops.reshape(transposed_fm, [batch_size, in_channels, num_patches, patch_area])
-#     transposed_fm = kops.transpose(reshaped_fm, [0, 3, 2, 1])
-#     patches = kops.reshape(transposed_fm, [batch_size * patch_area, num_patches, in_channels])
-
-#     info_dict = {
-#         "orig_size": (orig_h, orig_w),
-#         "batch_size": batch_size,
-#         "interpolate": kops.logical_or(kops.not_equal(new_w, orig_w), kops.not_equal(new_h, orig_h)),
-#         # "interpolat": True,
-#         "total_patches": num_patches,
-#         "num_patches_w": num_patch_w,
-#         "num_patches_h": num_patch_h,
-#         "patch_area": patch_area,
-#     }
-
-#     return patches, info_dict
-
-
 class MobileViT_v1_Block(Layer):
     def __init__(
         self,
