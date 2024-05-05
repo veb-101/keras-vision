@@ -8,7 +8,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 DESCRIPTION = "Building Vision models in Keras3 for framework agnostic training and inference."
 
 # Setting up
@@ -44,7 +44,7 @@ setup(
     # Note that this is a string of words separated by whitespace, not a list.
     keywords="keras3 tensorflow Jax PyTorch Vision",
     install_requires=[
-        "keras",
+        "keras>=3.3.3",
     ],
     python_requires=">=3.10",
     license="Apache 2.0",
