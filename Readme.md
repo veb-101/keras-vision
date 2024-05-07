@@ -1,12 +1,14 @@
-Porting all models from everywhere to Keras for leveraging multi-backend support.
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/keras-vision)](https://www.python.org/)  [![PyPI version](https://badge.fury.io/py/keras-vision.svg)](https://badge.fury.io/py/keras-vision) [![Keras](https://img.shields.io/badge/Keras%203.x-%23D00000.svg?logo=Keras&logoColor=white)](https://github.com/keras-team/keras/releases)
+
+Porting all models from everywhere to Keras to leverage multi-backend support.
 
 Cause why not?🤷🏻‍♂️
 
 **Installation:**
 
-1. Option 1: Install from pypi: `pip install -U keras-vision`
+1. Option 1: Install from PyPI: `pip install -U keras-vision`
 
-2. Option 2: Install the latest updates directly from pip:  `pip install git+https://github.com/veb-101/keras-vision.git`
+2. Option 2: Install the latest updates present in the repository: `pip install git+https://github.com/veb-101/keras-vision.git`
 
 **Usage:** Please refer to the `examples` folder
 
