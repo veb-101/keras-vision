@@ -40,6 +40,9 @@ class ConvLayer(Layer):
         if self.use_activation:
             self.activation = Activation("swish")
 
+    def build(self, input_shape):
+        super().build(input_shape)
+
     def call(self, x, **kwargs):
         x = self.zero_pad(x)
         x = self.conv(x)
@@ -103,6 +106,9 @@ class InvertedResidualBlock(Layer):
         self.bn = BatchNormalization(epsilon=1e-05, momentum=0.1)
         self.activation = Activation("swish")
         self.out_conv_block = ConvLayer(num_filters=num_out_channels, kernel_size=1, strides=1, use_activation=False, use_bn=True)
+
+    def build(self, input_shape):
+        super().build(input_shape)
 
     def call(self, data, **kwargs):
         out = self.expansion_conv_block(data)
