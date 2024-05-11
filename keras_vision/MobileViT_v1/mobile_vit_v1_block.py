@@ -130,6 +130,10 @@ class MobileViT_v1_Block(Layer):
     def build(self, input_shape):
         super().build(input_shape)
 
+    def compute_output_shape(self, input_shape):
+        shape = input_shape
+        return (shape[0], shape[1], shape[2], self.out_filters)
+
     def call(self, x):
         # Local Representation
         local_representation = self.local_rep_layer_1(x)
