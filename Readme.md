@@ -4,16 +4,88 @@ Porting all models from everywhere to Keras to leverage multi-backend support.
 
 Cause why not?🤷🏻‍♂️
 
-**Installation:**
+# Table of Contents
 
-1. Option 1: Install from PyPI: `pip install -U keras-vision`
+1. [Updates](#updates)
+2. [Quick Setup](#quick-setup)
+   - [Stable PyPi Package](#stable-pypi-package)
+   - [Latest Git Updates](#latest-git-updates)
+3. [Models Supported](#models-supported)
 
-2. Option 2: Install the latest updates present in the repository: `pip install git+https://github.com/veb-101/keras-vision.git`
 
-**Usage:** Please refer to the `examples` folder
+## Updates
 
-### Updates
-
-1. [2024-05-04] Converted MobileViT to Keras 3 and released weights of all 3 variants.
+1. [2024-05-15] Fixed MobileViT v1 - Now works will all 3 backends. 🎉🎉
+2. [2024-05-04] Converted MobileViT to Keras 3 and released weights of all 3 variants.
    1. Jax backend currently not working, I'm working on a fix.
    2. Release: <https://github.com/veb-101/keras-vision/releases/tag/v0.4>
+
+
+## Quick Setup
+
+### Stable PyPi Package
+
+```bash
+pip install keras-vision
+```
+
+### OR
+
+### Latest Git Updates
+
+```bash
+git clone https://github.com/veb-101/keras-vision.git
+cd keras_vision
+```
+Installation in the environment of your choice:
+
+```bash
+pip install .
+```
+
+
+## Models Supported 
+<table>
+   <thead>
+      <tr>
+         <th style="text-align:center">
+            <strong># No.</strong>
+         </th>
+         <th style="text-align:center">
+            <strong>Models</strong>
+         </th>
+         <th style="text-align:center">
+            <strong>Paper</strong>
+         </th>
+         <th style="text-align:center">
+            <strong>Additional Materials</strong>
+         </th>
+         <th style="text-align:center">
+            <strong>Example notebook</strong>
+         </th>
+         <th style="text-align:center">
+            <strong>Weights URL</strong>
+         </th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td style="text-align:center">1</td>
+         <td style="text-align:center">
+            <a href="https://github.com/veb-101/keras-vision/blob/main/keras_vision/MobileViT_v1/mobile_vit_v1.py">MobileViT-V1</a>
+         </td>
+         <td style="text-align:center">
+            <a href="https://arxiv.org/abs/2110.02178">MobileViT: Light-weight, General-purpose, and Mobile-friendly Vision Transformer</a>
+         </td>
+         <td style="text-align:center">
+            <a href="https://learnopencv.com/mobilevit-keras-3/">Blogpost: Building MobileViT In Keras 3</a>
+         </td>
+         <td style="text-align:center">
+            <a href="https://colab.research.google.com/github/veb-101/keras-vision/blob/main/examples/mobile_vit_v1.ipynb">Colab link</a>
+         </td>
+         <td style="text-align:center">
+            <a href="https://github.com/veb-101/keras-vision/releases/tag/v0.4">Releases v0.4</a>
+         </td>
+      </tr>
+   </tbody>
+</table>
