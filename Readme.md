@@ -1,7 +1,4 @@
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/keras-vision)](https://www.python.org/)  [![PyPI version](https://badge.fury.io/py/keras-vision.svg)](https://badge.fury.io/py/keras-vision) [![Keras](https://img.shields.io/badge/Keras%203.x-%23D00000.svg?logo=Keras&logoColor=white)](https://github.com/keras-team/keras/releases) <object type="image/svg+xml" data="https://img.shields.io/pypi/dm/keras-vision?style=plastic&logo=Keras&logoColor=red" onclick="window.location.href='https://pypi.org/project/keras-vision/'">
-    <!-- Your fallback content here -->
-    <img src="https://img.shields.io/pypi/dm/keras-vision?style=plastic&logo=Keras&logoColor=red" alt="Keras Vision Downloads">
-</object>
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/keras-vision)](https://www.python.org/)  [![PyPI version](https://badge.fury.io/py/keras-vision.svg)](https://badge.fury.io/py/keras-vision) [![Keras](https://img.shields.io/badge/Keras%203.x-%23D00000.svg?logo=Keras&logoColor=white)](https://github.com/keras-team/keras/releases) ![PyPI - Downloads](https://img.shields.io/pypi/dm/keras-vision?style=plastic&logo=Keras&logoColor=red&link=https%3A%2F%2Fpypi.org%2Fproject%2Fkeras-vision%2F)
 
 
 Porting all models from everywhere to Keras to leverage multi-backend support.
