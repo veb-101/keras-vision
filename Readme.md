@@ -26,7 +26,7 @@ Cause why not?🤷🏻‍♂️
 ### Stable PyPi Package
 
 ```bash
-pip install keras-vision
+pip install -U keras-vision
 ```
 
 ### OR
@@ -34,13 +34,7 @@ pip install keras-vision
 ### Latest Git Updates
 
 ```bash
-git clone https://github.com/veb-101/keras-vision.git
-cd keras_vision
-```
-Installation in the environment of your choice:
-
-```bash
-pip install .
+pip install git+https://github.com/veb-101/keras-vision.git
 ```
 
 
