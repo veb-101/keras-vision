@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "keras-vision"
-version = "0.4.4"
+version = "0.4.5"
 description = "Building Vision models in Keras3 for framework-agnostic training and inference."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -30,7 +30,7 @@ classifiers = [
 
 keywords = ["keras3", "tensorflow", "Jax", "PyTorch", "Vision"]
 
-dependencies = ["keras>=3.3.3"]
+dependencies = ["keras>=3.3.3", "numpy"]
 
 [tool.setuptools.packages.find]
 # In your `setup.py`, you had `find_packages()`. This line achieves the same.

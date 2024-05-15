@@ -1,7 +1,8 @@
+import os
 import warnings
 from typing import Optional
 
-
+import numpy as np
 import keras.ops as kops
 from keras import Model, Input
 from keras.layers import GlobalAveragePooling2D, Dropout, Dense
@@ -9,6 +10,7 @@ from keras.utils import get_file
 
 from .configs import get_mobile_vit_v1_configs
 from .base_layers import ConvLayer, InvertedResidualBlock
+
 from .mobile_vit_v1_block import MobileViT_v1_Block
 
 VERSION = 0.4
@@ -17,9 +19,9 @@ WEIGHTS_URL = "https://github.com/veb-101/keras-vision/releases/download/v{versi
 
 def MobileViT_v1(
     configs,
-    dropout: float = 0.1,
-    linear_drop: float = 0.0,
+    linear_drop: float = 0.1,
     attention_drop: float = 0.0,
+    dropout: float = 0.0,
     num_classes: int | None = 1000,
     input_shape: tuple[int, int, int] = (256, 256, 3),
     model_name: str = f"MobileViT_v1-S",
@@ -29,17 +31,12 @@ def MobileViT_v1(
     --------
 
         configs: A dataclass instance with model information such as per layer output channels, transformer embedding dimensions, transformer repeats, IR expansion factor
-
-        num_classes: (int)   Number of output classes
-
+        num_classes: (int) Number of output classes
         input_shape: (tuple) Input shape -> H, W, C
-
-        model_type: (str)   Model to create
-
-        linear_drop: (float) Dropout rate for Dense layers
-
+        model_type: (str) Model to create
+        linear_drop: (float) Dropout rate used for MHSA output and Transformer Dense block
         attention_drop: (float) Dropout rate for the attention matrix
-
+        dropout: (float) Additional Dropout rate used in Transformer Dense block.
     """
 
     input_layer = Input(shape=input_shape)
@@ -183,9 +180,11 @@ def build_MobileViT_v1(
 
     Additional arguments:
     ---------------------
-        linear_drop: (float) Dropout rate for Dense layers
+        linear_drop: (float) Dropout rate used for MHSA output and Transformer Dense block
         attention_drop: (float) Dropout rate for the attention matrix
+        dropout: (float) Additional Dropout rate used in Transformer Dense block.
     """
+
     model_type = model_type.upper()
     if model_type not in ("S", "XS", "XXS"):
         raise ValueError("Bad Input. 'model_type' should be one of ['S', 'XS', 'XXS']")
@@ -201,8 +200,15 @@ def build_MobileViT_v1(
         **kwargs,
     )
 
-    if pretrained:
+    # Initialize parameters of MobileViT block.
+    if None in input_shape:
+        dummy_input_shape = (1, 256, 256, 3)
+    else:
+        dummy_input_shape = (1,) + input_shape
 
+    model(np.random.randn(*dummy_input_shape), training=False)
+
+    if pretrained:
         weights_path = get_file(
             fname=f"keras_MobileVIT_v1_model_{model_type}.weights.h5",
             origin=WEIGHTS_URL.format(version=VERSION, model_type=model_type),

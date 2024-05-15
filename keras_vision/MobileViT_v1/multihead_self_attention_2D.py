@@ -35,7 +35,7 @@ class MultiHeadSelfAttention(Layer):
         # Transpose to shape (batch_size, num_heads, seq_len, projection_dim)
         return kops.transpose(x, axes=(0, 2, 1, 3))
 
-    def call(self, x):
+    def call(self, x, training=False):
         batch_size = kops.shape(x)[0]
 
         # Project and reshape to (batch_size, seq_len, 3, num_heads, projection_dim)
