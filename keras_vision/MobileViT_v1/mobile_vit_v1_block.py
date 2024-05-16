@@ -179,10 +179,9 @@ class MobileViT_v1_Block(Layer):
 
         # Initially convert channel-last to channel-first for processing
         shape = kops.shape(x)
-        batch_size = shape[0]
-
-        # orig_h, orig_w, D = x.shape[1], x.shape[2], x.shape[3]
-        orig_h, orig_w, D = shape[1], shape[2], shape[3]
+        batch_size, orig_h, orig_w, D = shape[0], shape[1], shape[2], shape[3]
+        
+        # orig_h, orig_w, D = x.shape[1], x.shape[2], x.shape[3]       
 
         h_ceil = ceil(orig_h / self.patch_size_h)
         w_ceil = ceil(orig_w / self.patch_size_w)
@@ -197,7 +196,6 @@ class MobileViT_v1_Block(Layer):
             x = kops.image.resize(x, (new_h, new_w))
             num_patches_h = new_h // self.patch_size_h
             num_patches_w = new_w // self.patch_size_w
-            num_patches = num_patches_h * num_patches_w
         else:
             num_patches_h = orig_h // self.patch_size_h
             num_patches_w = orig_w // self.patch_size_w
