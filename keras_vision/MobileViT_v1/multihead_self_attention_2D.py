@@ -1,5 +1,5 @@
-import keras.ops as kops
-from keras.layers import Layer, Dropout, Dense, Softmax
+import keras.ops as kops # type: ignore
+from keras.layers import Layer, Dropout, Dense, Softmax # type: ignore
 
 
 class MultiHeadSelfAttention(Layer):
