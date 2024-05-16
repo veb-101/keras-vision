@@ -1,6 +1,6 @@
 import keras
-import keras.ops as kops
-from keras.layers import Layer, Dropout, Dense, LayerNormalization, Concatenate
+import keras.ops as kops  # type: ignore
+from keras.layers import Layer, Dropout, Dense, LayerNormalization, Concatenate  # type: ignore
 
 from .base_layers import ConvLayer
 from .multihead_self_attention_2D import MultiHeadSelfAttention as MHSA
@@ -180,7 +180,9 @@ class MobileViT_v1_Block(Layer):
         # Initially convert channel-last to channel-first for processing
         shape = kops.shape(x)
         batch_size = shape[0]
-        orig_h, orig_w, D = x.shape[1], x.shape[2], x.shape[3]
+
+        # orig_h, orig_w, D = x.shape[1], x.shape[2], x.shape[3]
+        orig_h, orig_w, D = shape[1], shape[2], shape[3]
 
         h_ceil = ceil(orig_h / self.patch_size_h)
         w_ceil = ceil(orig_w / self.patch_size_w)
@@ -199,7 +201,8 @@ class MobileViT_v1_Block(Layer):
         else:
             num_patches_h = orig_h // self.patch_size_h
             num_patches_w = orig_w // self.patch_size_w
-            num_patches = num_patches_h * num_patches_w
+
+        num_patches = num_patches_h * num_patches_w
 
         # [B, H, W, D] --> [B*nh, ph, nw, pw*D]
         reshaped_fm = kops.reshape(x, (batch_size * num_patches_h, self.patch_size_h, num_patches_w, self.patch_size_w * D))
