@@ -14,6 +14,9 @@ Cause why not?🤷🏻‍♂️
 3. [Models Supported](#models-supported)
 
 
+## Progress
+* Working on adding MobileViT v2 
+
 ## Updates
 
 1. [2024-05-15] Fixed MobileViT v1 - Now works will all 3 backends. 🎉🎉
