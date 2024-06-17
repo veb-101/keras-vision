@@ -1,5 +1,5 @@
-import keras.ops as kops # type: ignore
-from keras.layers import Layer, Dropout, Dense, Softmax # type: ignore
+import keras.ops as kops  # type: ignore
+from keras.layers import Layer, Dropout, Dense, Softmax  # type: ignore
 
 
 class MultiHeadSelfAttention(Layer):
@@ -64,3 +64,18 @@ class MultiHeadSelfAttention(Layer):
         output = self.linear_dropout(output)
 
         return output
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "num_heads": self.num_heads,
+                "embedding_dim": self.embedding_dim,
+                "projection_dim": self.projection_dim,
+                "qkv_bias": self.qkv_bias,
+                "attention_drop": self.attention_drop,
+                "linear_drop": self.linear_drop,
+            }
+        )
+
+        return config
