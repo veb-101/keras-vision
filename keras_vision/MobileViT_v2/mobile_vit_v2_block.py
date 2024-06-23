@@ -3,7 +3,7 @@ from typing import Union, Tuple
 
 import keras
 import keras.ops as kops  # type: ignore
-from keras.layers import Layer, DepthwiseConv2D, Dropout, Dense, BatchNormalization, LayerNormalization, Activation
+from keras.layers import Layer, DepthwiseConv2D, Dropout, Dense, BatchNormalization, LayerNormalization, Activation, GroupNormalization
 
 from .base_layers import ConvLayer
 from .linear_attention import LinearSelfAttention as LSA
@@ -16,7 +16,7 @@ class Transformer(Layer):
         qkv_bias: bool = True,
         mlp_ratio: float = 2.0,
         dropout: float = 0.0,
-        linear_drop: float = 0.1,
+        linear_drop: float = 0.0,
         attention_drop: float = 0.0,
         **kwargs,
     ):
@@ -28,7 +28,7 @@ class Transformer(Layer):
         self.linear_drop = linear_drop
         self.attention_drop = attention_drop
 
-        self.norm_1 = LayerNormalization(epsilon=1e-5)
+        self.norm_1 = GroupNormalization(groups=1, epsilon=1e-05)  # LayerNormalization(epsilon=1e-5)
 
         self.attn = LSA(
             embedding_dim=self.embedding_dim,
@@ -37,7 +37,7 @@ class Transformer(Layer):
             linear_drop=self.linear_drop,
         )
 
-        self.norm_2 = LayerNormalization(epsilon=1e-6)
+        self.norm_2 = GroupNormalization(groups=1, epsilon=1e-05)  # LayerNormalization(epsilon=1e-5)
 
         hidden_features = int(self.embedding_dim * self.mlp_ratio)
         self.pre_norm_ffn_0 = ConvLayer(num_filters=hidden_features, kernel_size=1, strides=1, use_bn=False)
@@ -116,7 +116,7 @@ class MobileViT_v2_Block(Layer):
             for _ in range(self.transformer_repeats)
         ]
 
-        self.transformer_layer_norm = LayerNormalization(epsilon=1e-5)  # 1e-6
+        self.transformer_layer_norm = GroupNormalization(groups=1, epsilon=1e-05)
 
         # Projection block
         self.conv_proj = ConvLayer(num_filters=self.out_filters, kernel_size=1, strides=1, use_bn=True, use_activation=False)
