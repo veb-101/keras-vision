@@ -69,7 +69,7 @@ pip install git+https://github.com/veb-101/keras-vision.git
    </thead>
    <tbody>
       <tr>
-         <td style="text-align:center">1</td>
+         <td style="text-align:center">2</td>
          <td style="text-align:center">
             <a href="https://github.com/veb-101/keras-vision/blob/main/keras_vision/MobileViT_v1/mobile_vit_v1.py">MobileViT-V1</a>
          </td>
