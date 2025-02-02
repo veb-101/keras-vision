@@ -1,67 +1,23 @@
 import gc
-import os
-
-# os.environ["KERAS_BACKEND"] = "tensorflow"
-os.environ["KERAS_BACKEND"] = "jax"
-# os.environ["KERAS_BACKEND"] = "torch"
 from typing import Union, Tuple
 
+# import os
+
+# os.environ["KERAS_BACKEND"] = "tensorflow"
+# os.environ["KERAS_BACKEND"] = "jax"
+# os.environ["KERAS_BACKEND"] = "torch"
+
 import keras
+from keras import ops as kops
 from keras import layers as keras_layer
 
+from .squeeze_excite import SEBlock
 
-from keras import ops as kops
+__all__ = ["MobileOneBlock", "reparameterize_model"]
 
 
-class SEBlock(keras_layer.Layer):
-    """Squeeze and Excite module.
-
-    Pytorch implementation of `Squeeze-and-Excitation Networks` -
-    https://arxiv.org/pdf/1709.01507.pdf
-    """
-
-    def __init__(self, in_channels: int, rd_ratio: float = 0.0625, **kwargs) -> None:
-        """Construct a Squeeze and Excite Module.
-
-        Args:
-            in_channels: Number of input channels.
-            rd_ratio: Input channel reduction ratio.
-        """
-        super().__init__(**kwargs)
-
-        self.reduce = keras_layer.Conv2D(
-            filters=int(in_channels * rd_ratio),
-            kernel_size=1,
-            strides=(1, 1),
-            padding="valid",
-            use_bias=True,
-        )
-
-        self.expand = keras_layer.Conv2D(
-            filters=in_channels,
-            kernel_size=1,
-            strides=(1, 1),
-            padding="valid",
-            use_bias=True,
-        )
-        self.global_average_pool = keras_layer.GlobalAveragePooling2D(keepdims=True)  # to maintain (h, w) dims
-        self.relu = keras_layer.Activation("relu")
-        self.sigmoid = keras_layer.Activation("sigmoid")
-
-    def build(self, input_shape):
-        super().build(input_shape)
-
-    def call(self, inputs):
-        """Apply forward pass."""
-
-        x = self.global_average_pool(inputs)
-        # b, h, w, c = kops.shape(inputs)
-        # x = kops.average_pool()
-        x = self.reduce(x)
-        x = self.relu(x)
-        x = self.expand(x)
-        x = self.sigmoid(x)
-        return inputs * x
+_DEPTHWISE_CONV = "depthwise"
+_CONV = "conv2d"
 
 
 class MobileOneBlock(keras_layer.Layer):
@@ -73,28 +29,6 @@ class MobileOneBlock(keras_layer.Layer):
     `An Improved One millisecond Mobile Backbone` -
     https://arxiv.org/pdf/2206.04040.pdf
     """
-
-    def get_config(self):
-        config = super().get_config()
-        config.update(
-            {
-                "in_channels": self.in_channels,
-                "out_channels": self.out_channels,
-                "kernel_size": self.kernel_size,
-                "stride": self.stride,
-                "padding": self.padding,
-                "dilation": self.dilation,
-                "groups": self.groups,
-                "inference_mode": self.inference_mode,
-                "use_se": self.use_se,
-                "use_act": self.use_act,
-                "use_scale_branch": self.use_scale_branch,
-                "num_conv_branches": self.num_conv_branches,
-                "activation": self.activation,
-            }
-        )
-
-        return config
 
     def __init__(
         self,
@@ -144,14 +78,31 @@ class MobileOneBlock(keras_layer.Layer):
         self.use_se = use_se
         self.use_act = use_act
 
-        name_prefix = kwargs["name"] if kwargs.get("name", None) else "mob"
+        #####################################################
+        self.se_layer_name = "se_layer"
+        self.activation_layer_name = "activation_layer"
+        self.rbr_skip_bn_branch = "rbr_skip_bn"
+        self.conv_branch_names = "conv_branch"
+        self.rbr_scale_conv_branch_name = "rbr_scale_conv_branch"
+
+        self.reparam_pad_layer_name = "reparam_conv_pad"
+        self.reparam_conv_layer_name = "reparam_conv"
+        #####################################################
+
+        # name_prefix = kwargs["name"] if kwargs.get("name", None) else "mob"
 
         # Check if SE-ReLU is requested
-        self.se = SEBlock(in_channels=self.out_channels, name="se_layer") if self.use_se else keras_layer.Identity(name="se_layer")
-        self.activation = keras_layer.Activation(self.activation, name="activation_layer") if self.use_act else keras_layer.Identity(name="activation_layer")
+        self.se = SEBlock(in_channels=self.out_channels, name=self.se_layer_name) if self.use_se else keras_layer.Identity(name=self.se_layer_name)
+        self.activation = (
+            keras_layer.Activation(self.activation, name=self.activation_layer_name) if self.use_act else keras_layer.Identity(name=self.activation_layer_name)
+        )
 
         # Conv type to use.
-        self.conv_type = "depthwise" if self.groups == self.out_channels else "conv2d"
+        self.conv_type = _DEPTHWISE_CONV if self.groups == self.in_channels else _CONV
+        if self.conv_type == _DEPTHWISE_CONV:
+            # When out_channels is a multiple of in_channels, the conv kernel's shape is (kH,kW, in_channel, depth_multiplier)
+            # As it's a calculation that will be used many times, we make it as part of the initialization to make it more verbose.
+            self.depth_multiplier = self.out_channels // self.in_channels
 
         if inference_mode:
             self._set_reparam_layers()
@@ -159,7 +110,7 @@ class MobileOneBlock(keras_layer.Layer):
             # Re-parameterizable skip connection
             # identity branch - only contains BN
             if self.out_channels == self.in_channels and self.stride == 1:
-                self.rbr_skip = keras_layer.BatchNormalization(name=f"{name_prefix}_rbr_skip_bn")
+                self.rbr_skip = keras_layer.BatchNormalization(epsilon=1e-5, name=f"{self.name}_{self.rbr_skip_bn_branch}")
             else:
                 self.rbr_skip = None
 
@@ -169,7 +120,7 @@ class MobileOneBlock(keras_layer.Layer):
                 self.rbr_conv = list()
 
                 for i in range(self.num_conv_branches):
-                    self.rbr_conv.append(self._conv_bn(kernel_size=self.kernel_size, padding=self.padding, name=f"{name_prefix}_conv_branch_{i}"))
+                    self.rbr_conv.append(self._conv_bn(kernel_size=self.kernel_size, padding=self.padding, name=f"{self.name}_{self.conv_branch_names}_{i}"))
 
             else:
                 self.rbr_conv = None
@@ -178,11 +129,11 @@ class MobileOneBlock(keras_layer.Layer):
             # 1x1 conv branch
             self.rbr_scale = None
             if (kernel_size > 1) and self.use_scale_branch:
-                self.rbr_scale = self._conv_bn(kernel_size=1, padding=0, name=f"{name_prefix}_rbr_scale_conv_branch")
+                self.rbr_scale = self._conv_bn(kernel_size=1, padding=0, name=f"{self.name}_{self.rbr_scale_conv_branch_name}")
 
     def _set_reparam_layers(self):
-        self.zero_pad_infer = keras_layer.ZeroPadding2D(padding=(1, 1), name="reparam_conv_pad") if self.padding == 1 else None
-        if self.conv_type == "conv2d":
+        self.zero_pad_infer = keras_layer.ZeroPadding2D(padding=(1, 1), name=self.reparam_pad_layer_name) if self.padding == 1 else None
+        if self.conv_type == _CONV:
             self.reparam_conv = keras_layer.Conv2D(
                 filters=self.out_channels,
                 kernel_size=self.kernel_size,
@@ -191,28 +142,25 @@ class MobileOneBlock(keras_layer.Layer):
                 dilation_rate=self.dilation,
                 groups=self.groups,
                 use_bias=True,
-                name="reparam_conv",
+                name=self.reparam_conv_layer_name,
             )
         else:
             self.reparam_conv = keras_layer.DepthwiseConv2D(
+                depth_multiplier=self.depth_multiplier,
                 kernel_size=self.kernel_size,
                 strides=self.stride,
                 padding="valid",
                 dilation_rate=self.dilation,
                 use_bias=True,
-                name="reparam_conv",
+                name=self.reparam_conv_layer_name,
             )
-
-    def build(self, input_shape):
-        self._set_reparam_layers()
-        super().build(input_shape)
 
     def _conv_bn(self, kernel_size: int, padding: str, name: str):
         """Helper method to construct conv-batchnorm layers.
 
         Args:
             kernel_size: Size of the convolution kernel.
-            padding: Zero-padding type.
+            padding: Zero-padding size.
 
         Returns:
             Conv-BN module.
@@ -223,7 +171,7 @@ class MobileOneBlock(keras_layer.Layer):
         if padding == 1:
             conv_bn_mod.add(keras_layer.ZeroPadding2D(padding=(1, 1)))
 
-        if self.conv_type == "conv2d":
+        if self.conv_type == _CONV:
             conv_layer = keras_layer.Conv2D(
                 filters=self.out_channels,
                 kernel_size=kernel_size,
@@ -234,6 +182,7 @@ class MobileOneBlock(keras_layer.Layer):
             )
         else:
             conv_layer = keras_layer.DepthwiseConv2D(
+                depth_multiplier=self.depth_multiplier,
                 kernel_size=kernel_size,
                 strides=self.stride,
                 padding="valid",
@@ -241,7 +190,7 @@ class MobileOneBlock(keras_layer.Layer):
             )
 
         conv_bn_mod.add(conv_layer)
-        conv_bn_mod.add(keras_layer.BatchNormalization())
+        conv_bn_mod.add(keras_layer.BatchNormalization(epsilon=1e-5))
 
         return conv_bn_mod
 
@@ -256,12 +205,12 @@ class MobileOneBlock(keras_layer.Layer):
 
         # Multi-branched train-time forward pass.
         # Skip branch output
-        identity_out = 0
+        identity_out = 0.0
         if self.rbr_skip is not None:
             identity_out = self.rbr_skip(x)
 
         # Scale branch output
-        scale_out = 0
+        scale_out = 0.0
         if self.rbr_scale is not None:
             scale_out = self.rbr_scale(x)
 
@@ -278,6 +227,8 @@ class MobileOneBlock(keras_layer.Layer):
         https://arxiv.org/pdf/2101.03697.pdf. We re-parameterize multi-branched
         architecture used at training time to obtain a plain CNN-like structure
         for inference.
+
+        Here, to remove layers from the graph I'm using the 'name' provided to each layer during layer creation.
         """
 
         if self.inference_mode:
@@ -285,7 +236,7 @@ class MobileOneBlock(keras_layer.Layer):
 
         kernel, bias = self._get_kernel_bias()
 
-        self.reparam_conv.build((None, None, self.in_channels))
+        self.reparam_conv.build((None, None, None, self.in_channels))
         self.reparam_conv.set_weights([kernel, bias])
 
         self.__delattr__("rbr_conv")
@@ -293,6 +244,10 @@ class MobileOneBlock(keras_layer.Layer):
         if hasattr(self, "rbr_skip"):
             self.__delattr__("rbr_skip")
 
+        # print(self._layers)
+
+        # * Removing layers and their weights that were part of the original model.
+        # I can do this because I've provide specific names to those layers.
         layers_idx_to_remove = [idx for idx, layer in enumerate(self._layers) if self.name in layer.name]
 
         for i in reversed(layers_idx_to_remove):
@@ -322,8 +277,8 @@ class MobileOneBlock(keras_layer.Layer):
             paddings = [
                 (pad, pad),  # Pad kernel height
                 (pad, pad),  # Pad kernel width
-                (0, 0),  # No padding for in_channels
-                (0, 0),  # No padding for out_channels
+                (0, 0),  # No padding for channel dims
+                (0, 0),
             ]
             kernel_scale = kops.pad(kernel_scale, paddings, mode="constant")
 
@@ -356,9 +311,7 @@ class MobileOneBlock(keras_layer.Layer):
         Returns:
             Tuple of (kernel, bias) after fusing batchnorm.
         """
-        # Goal is to:
-        #   First make batch-norm params the same shape as the conv-kernel either before it or in different branch (same block)
-        #   merge the weights.
+        # Goal is to: First make batch-norm params the same shape as the conv-kernel either before merging the weights.
 
         if isinstance(branch, keras.Sequential):
             _branch_len = len(branch.layers)
@@ -395,11 +348,11 @@ class MobileOneBlock(keras_layer.Layer):
                 input_dim = self.in_channels // self.groups
                 _kernel_size = self.kernel_size // 2
 
-                if self.conv_type == "conv2d":
+                if self.conv_type == _CONV:
                     _kernel_shape = (self.kernel_size, self.kernel_size, input_dim, self.in_channels)
                     kernel_value = kops.zeros(_kernel_shape, dtype=_branch_weights_dtype)
 
-                elif self.conv_type == "depthwise":
+                elif self.conv_type == _DEPTHWISE_CONV:
                     _kernel_shape = (self.kernel_size, self.kernel_size, self.in_channels, input_dim)
                     kernel_value = kops.zeros(_kernel_shape, dtype=_branch_weights_dtype)
 
@@ -408,10 +361,10 @@ class MobileOneBlock(keras_layer.Layer):
                 updates = []
 
                 for i in range(self.in_channels):
-                    if self.conv_type == "conv2d":
+                    if self.conv_type == _CONV:
                         indices.append([_kernel_size, _kernel_size, i % input_dim, i])  # Center position
                         updates.append(1.0)
-                    elif self.conv_type == "depthwise":
+                    elif self.conv_type == _DEPTHWISE_CONV:
                         indices.append([_kernel_size, _kernel_size, i, i % input_dim])  # Center position
                         updates.append(1.0)
 
@@ -427,14 +380,40 @@ class MobileOneBlock(keras_layer.Layer):
 
         std = kops.sqrt(running_var + eps)
 
-        if self.conv_type == "conv2d":
+        if self.conv_type == _CONV:
             _kernel_multiplier_reshape_dims = (1, 1, 1, -1)
-        elif self.conv_type == "depthwise":
-            _kernel_multiplier_reshape_dims = (1, 1, -1, 1)
+        elif self.conv_type == _DEPTHWISE_CONV:
+            _kernel_multiplier_reshape_dims = (1, 1, -1, self.depth_multiplier)
 
         t = kops.divide(gamma, std)
         t = kops.reshape(t, _kernel_multiplier_reshape_dims)
         return kops.multiply(kernel, t), kops.multiply(beta - running_mean, kops.divide(gamma, std))
+
+    def build(self, input_shape):
+        self._set_reparam_layers()
+        super().build(input_shape)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "in_channels": self.in_channels,
+                "out_channels": self.out_channels,
+                "kernel_size": self.kernel_size,
+                "stride": self.stride,
+                "padding": self.padding,
+                "dilation": self.dilation,
+                "groups": self.groups,
+                "inference_mode": self.inference_mode,
+                "use_se": self.use_se,
+                "use_act": self.use_act,
+                "use_scale_branch": self.use_scale_branch,
+                "num_conv_branches": self.num_conv_branches,
+                "activation": self.activation,
+            }
+        )
+
+        return config
 
 
 def reparameterize_model(model: keras.Model | keras.Sequential) -> keras.Model | keras.Sequential:
@@ -469,35 +448,35 @@ if __name__ == "__main__":
     # print(out.shape)
 
     model = keras.Sequential()
-    model.add(keras.Input(shape=inp.shape[1:]))
+    model.add(keras.Input(shape=(None, None, in_channels)))
     model.add(
         MobileOneBlock(
             in_channels=in_channels,
-            out_channels=in_channels,
+            out_channels=in_channels * 2,
             kernel_size=3,
-            stride=1,
-            padding=1,
-            groups=in_channels,
-            use_se=True,
-            num_conv_branches=2,
-            name="mob_1",
-            use_scale_branch=True,
-        )
-    )
-
-    model.add(
-        MobileOneBlock(
-            in_channels=in_channels,
-            out_channels=in_channels,
-            kernel_size=3,
-            stride=1,
+            stride=2,
             padding=1,
             groups=in_channels,
             use_se=False,
-            num_conv_branches=2,
-            name="mob_2",
+            num_conv_branches=1,
+            name="mob_1",
+            # use_scale_branch=True,
         )
     )
+
+    # model.add(
+    #     MobileOneBlock(
+    #         in_channels=in_channels,
+    #         out_channels=in_channels,
+    #         kernel_size=3,
+    #         stride=1,
+    #         padding=1,
+    #         groups=in_channels,
+    #         use_se=False,
+    #         num_conv_branches=2,
+    #         name="mob_2",
+    #     )
+    # )
 
     model.summary(expand_nested=True, show_trainable=True)
 
@@ -510,4 +489,5 @@ if __name__ == "__main__":
     model = reparameterize_model(model)
     model.summary(expand_nested=True, show_trainable=True)
 
-    print(model.layers[0]._layers)
+    # print(model.layers[0]._layers)
+    # # # print(model.layers[1]._layers)
