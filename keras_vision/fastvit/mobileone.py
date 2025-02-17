@@ -81,8 +81,8 @@ class MobileOneBlock(keras_layer.Layer):
         #####################################################
         self.se_layer_name = "se_layer"
         self.activation_layer_name = "activation_layer"
-        self.rbr_skip_bn_branch = "rbr_skip_bn"
-        self.conv_branch_names = "conv_branch"
+        self.rbr_skip_bn_branch_name = "rbr_skip_bn"
+        self.conv_branch_name = "conv_branch"
         self.rbr_scale_conv_branch_name = "rbr_scale_conv_branch"
 
         self.reparam_pad_layer_name = "reparam_conv_pad"
@@ -104,13 +104,13 @@ class MobileOneBlock(keras_layer.Layer):
             # As it's a calculation that will be used many times, we make it as part of the initialization to make it more verbose.
             self.depth_multiplier = self.out_channels // self.in_channels
 
-        if inference_mode:
+        if self.inference_mode:
             self._set_reparam_layers()
         else:
             # Re-parameterizable skip connection
             # identity branch - only contains BN
             if self.out_channels == self.in_channels and self.stride == 1:
-                self.rbr_skip = keras_layer.BatchNormalization(epsilon=1e-5, name=f"{self.name}_{self.rbr_skip_bn_branch}")
+                self.rbr_skip = keras_layer.BatchNormalization(epsilon=1e-5, name=f"{self.name}_{self.rbr_skip_bn_branch_name}")
             else:
                 self.rbr_skip = None
 
@@ -120,7 +120,13 @@ class MobileOneBlock(keras_layer.Layer):
                 self.rbr_conv = list()
 
                 for i in range(self.num_conv_branches):
-                    self.rbr_conv.append(self._conv_bn(kernel_size=self.kernel_size, padding=self.padding, name=f"{self.name}_{self.conv_branch_names}_{i}"))
+                    self.rbr_conv.append(
+                        self._conv_bn(
+                            kernel_size=self.kernel_size,
+                            padding=self.padding,
+                            name=f"{self.name}_{self.conv_branch_name}_{i}",
+                        )
+                    )
 
             else:
                 self.rbr_conv = None
@@ -129,7 +135,11 @@ class MobileOneBlock(keras_layer.Layer):
             # 1x1 conv branch
             self.rbr_scale = None
             if (kernel_size > 1) and self.use_scale_branch:
-                self.rbr_scale = self._conv_bn(kernel_size=1, padding=0, name=f"{self.name}_{self.rbr_scale_conv_branch_name}")
+                self.rbr_scale = self._conv_bn(
+                    kernel_size=1,
+                    padding=0,
+                    name=f"{self.name}_{self.rbr_scale_conv_branch_name}",
+                )
 
     def _set_reparam_layers(self):
         self.zero_pad_infer = keras_layer.ZeroPadding2D(padding=(1, 1), name=self.reparam_pad_layer_name) if self.padding == 1 else None
@@ -256,6 +266,7 @@ class MobileOneBlock(keras_layer.Layer):
         gc.collect()
 
         self.inference_mode = True
+        # self.trainable = False
 
     def _get_kernel_bias(self):
         """Method to obtain re-parameterized kernel and bias.
@@ -340,7 +351,7 @@ class MobileOneBlock(keras_layer.Layer):
                 PT - outC, inC, kH, kW
 
                 Depthwise
-                TF - kH, kW, outC, inC
+                TF - kH, kW, outC, depth_multiplier (outC/inC) 
                 PT - outC, inC, kH, kW
 
                 We are primarily using channel last format.
@@ -349,11 +360,21 @@ class MobileOneBlock(keras_layer.Layer):
                 _kernel_size = self.kernel_size // 2
 
                 if self.conv_type == _CONV:
-                    _kernel_shape = (self.kernel_size, self.kernel_size, input_dim, self.in_channels)
+                    _kernel_shape = (
+                        self.kernel_size,
+                        self.kernel_size,
+                        input_dim,
+                        self.in_channels,
+                    )
                     kernel_value = kops.zeros(_kernel_shape, dtype=_branch_weights_dtype)
 
                 elif self.conv_type == _DEPTHWISE_CONV:
-                    _kernel_shape = (self.kernel_size, self.kernel_size, self.in_channels, input_dim)
+                    _kernel_shape = (
+                        self.kernel_size,
+                        self.kernel_size,
+                        self.in_channels,
+                        input_dim,
+                    )
                     kernel_value = kops.zeros(_kernel_shape, dtype=_branch_weights_dtype)
 
                 # Prepare indices and values for scatter operation
@@ -416,7 +437,9 @@ class MobileOneBlock(keras_layer.Layer):
         return config
 
 
-def reparameterize_model(model: keras.Model | keras.Sequential) -> keras.Model | keras.Sequential:
+def reparameterize_model(
+    model: keras.Model | keras.Sequential,
+) -> keras.Model | keras.Sequential:
     """Method returns a model where a multi-branched structure
         used in training is re-parameterized into a single branch
         for inference.

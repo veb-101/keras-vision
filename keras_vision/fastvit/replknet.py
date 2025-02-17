@@ -182,7 +182,6 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         architecture used at training time to obtain a plain CNN-like structure
         for inference.
         """
-
         if self.inference_mode:
             return
 
@@ -207,6 +206,7 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         gc.collect()
 
         self.inference_mode = True
+        # self.trainable = False
 
     def _get_kernel_bias(self) -> Tuple[keras.KerasTensor, keras.KerasTensor]:
         """Method to obtain re-parameterized kernel and bias.
@@ -220,7 +220,6 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         if hasattr(self, "small_conv"):
             small_k, small_b = self._fuse_bn_tensor(self.small_conv)
             eq_b += small_b
-            # eq_k += nn.functional.pad(small_k, [(self.kernel_size - self.small_kernel) // 2] * 4)
 
             pad = (self.kernel_size - self.small_kernel) // 2
             # To pad height and width only, we set padding on the first two dimensions:
