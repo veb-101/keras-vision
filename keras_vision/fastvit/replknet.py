@@ -38,7 +38,7 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         small_kernel: int,
         inference_mode: bool = False,
         use_se: bool = False,
-        activation: str = "gelu",
+        activation: str | None = None,
         **kwargs,
     ) -> None:
         """Construct a ReparamLargeKernelConv module.
@@ -72,7 +72,6 @@ class ReparamLargeKernelConv(keras_layer.Layer):
 
         self.reparam_pad_layer_name = "reparam_lkbconv_pad"
         self.reparam_conv_layer_name = "reparam_lkbconv"
-
         # Conv type to use.
         self.conv_type = _DEPTHWISE_CONV if self.groups == self.in_channels else _CONV
         if self.conv_type == _DEPTHWISE_CONV:
@@ -90,7 +89,9 @@ class ReparamLargeKernelConv(keras_layer.Layer):
                 assert self.small_kernel <= self.kernel_size, "The kernel size for re-param cannot be larger than the large kernel!"
                 self.small_conv = self._conv_bn(kernel_size=self.small_kernel, padding=self.small_kernel // 2, name=f"{self.name}_small_conv")
 
-        self.squeeze_excite = SEBlock(self.out_channels, rd_ratio=0.25, name=self.se_layer_name) if use_se else keras_layer.Identity(name=self.se_layer_name)
+        self.squeeze_excite = (
+            SEBlock(self.out_channels, rd_ratio=0.25, name=self.se_layer_name) if self.use_se else keras_layer.Identity(name=self.se_layer_name)
+        )
 
         self.activation_layer = (
             keras_layer.Activation(self.activation, name=self.activation_layer_name)
@@ -169,7 +170,7 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         else:
             out = self.lkb_origin(x)
             if hasattr(self, "small_conv"):
-                out += self.small_conv(x)
+                out = out + self.small_conv(x)
 
         out = self.squeeze_excite(out)
         out = self.activation_layer(out)

@@ -47,8 +47,8 @@ class ConvFFN(keras.Layer):
                 keras_layer.BatchNormalization(),
             ]
         )
-        kernel_initializer = keras.initializers.TruncatedNormal(std=0.02)
-        bias_initializer = keras.initializers.initializer.Zeros()
+        kernel_initializer = keras.initializers.TruncatedNormal(stddev=0.02)
+        bias_initializer = keras.initializers.Zeros()
 
         self.fc1 = keras_layer.Conv2D(
             filters=self.hidden_channels,
@@ -88,9 +88,9 @@ class ConvFFN(keras.Layer):
 
 
 if __name__ == "__main__":
-    in_channels = 32
+    in_channels = 64
     hidden_channels = 64
-    out_channels = in_channels * 2
+    out_channels = in_channels
     conv_stem = ConvFFN(
         in_channels=in_channels,
         hidden_channels=hidden_channels,

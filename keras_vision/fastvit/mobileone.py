@@ -93,7 +93,7 @@ class MobileOneBlock(keras_layer.Layer):
 
         # Check if SE-ReLU is requested
         self.se = SEBlock(in_channels=self.out_channels, name=self.se_layer_name) if self.use_se else keras_layer.Identity(name=self.se_layer_name)
-        self.activation = (
+        self.activation_layer = (
             keras_layer.Activation(self.activation, name=self.activation_layer_name) if self.use_act else keras_layer.Identity(name=self.activation_layer_name)
         )
 
@@ -117,15 +117,16 @@ class MobileOneBlock(keras_layer.Layer):
             # Re-parameterizable conv branches
             # nxn conv-bn branch - can be many
             if self.num_conv_branches > 0:
-                self.rbr_conv = list()
 
                 for i in range(self.num_conv_branches):
-                    self.rbr_conv.append(
+                    setattr(
+                        self,
+                        f"{self.name}_{self.conv_branch_name}_{i}",
                         self._conv_bn(
                             kernel_size=self.kernel_size,
                             padding=self.padding,
                             name=f"{self.name}_{self.conv_branch_name}_{i}",
-                        )
+                        ),
                     )
 
             else:
@@ -209,9 +210,9 @@ class MobileOneBlock(keras_layer.Layer):
         # Inference mode forward pass.
         if self.inference_mode:
             if self.zero_pad_infer is None:
-                return self.activation(self.se(self.reparam_convx(x)))
+                return self.activation_layer(self.se(self.reparam_convx(x)))
             else:
-                return self.activation(self.se(self.reparam_conv(self.zero_pad_infer(x))))
+                return self.activation_layer(self.se(self.reparam_conv(self.zero_pad_infer(x))))
 
         # Multi-branched train-time forward pass.
         # Skip branch output
@@ -226,11 +227,11 @@ class MobileOneBlock(keras_layer.Layer):
 
         # Other branches
         out = scale_out + identity_out
-        if self.rbr_conv is not None:
+        if self.num_conv_branches > 0:
             for ix in range(self.num_conv_branches):
-                out += self.rbr_conv[ix](x)
+                out = getattr(self, f"{self.name}_{self.conv_branch_name}_{ix}")(x)
 
-        return self.activation(self.se(out))
+        return self.activation_layer(self.se(out))
 
     def reparameterize(self):
         """Following works like `RepVGG: Making VGG-style ConvNets Great Again` -
@@ -249,7 +250,10 @@ class MobileOneBlock(keras_layer.Layer):
         self.reparam_conv.build((None, None, None, self.in_channels))
         self.reparam_conv.set_weights([kernel, bias])
 
-        self.__delattr__("rbr_conv")
+        if self.num_conv_branches > 0:
+            for ix in range(self.num_conv_branches):
+                self.__delattr__(f"{self.name}_{self.conv_branch_name}_{ix}")
+
         self.__delattr__("rbr_scale")
         if hasattr(self, "rbr_skip"):
             self.__delattr__("rbr_skip")
@@ -302,9 +306,9 @@ class MobileOneBlock(keras_layer.Layer):
         # Get weights and bias of conv branches
         kernel_conv = 0.0
         bias_conv = 0.0
-        if self.rbr_conv is not None:
+        if self.num_conv_branches > 0:
             for ix in range(self.num_conv_branches):
-                _kernel, _bias = self._fuse_bn_tensor(self.rbr_conv[ix])
+                _kernel, _bias = self._fuse_bn_tensor(getattr(self, f"{self.name}_{self.conv_branch_name}_{ix}"))
                 kernel_conv += _kernel
                 bias_conv += _bias
 
@@ -460,7 +464,7 @@ def reparameterize_model(
 
 
 if __name__ == "__main__":
-    in_channels = 16
+    in_channels = 384
     # se_block = SEBlock(in_channels=in_channels)
 
     import numpy as np
@@ -470,22 +474,23 @@ if __name__ == "__main__":
     # out = se_block(inp)
     # print(out.shape)
 
+    layer = MobileOneBlock(
+        in_channels=in_channels,
+        out_channels=int(in_channels * 2.0),
+        kernel_size=3,
+        stride=1,
+        padding=1,
+        groups=384,
+        inference_mode=False,
+        use_se=True,
+        num_conv_branches=1,
+    )
+
+    layer(inp)
+
     model = keras.Sequential()
     model.add(keras.Input(shape=(None, None, in_channels)))
-    model.add(
-        MobileOneBlock(
-            in_channels=in_channels,
-            out_channels=in_channels * 2,
-            kernel_size=3,
-            stride=2,
-            padding=1,
-            groups=in_channels,
-            use_se=False,
-            num_conv_branches=1,
-            name="mob_1",
-            # use_scale_branch=True,
-        )
-    )
+    model.add(layer)
 
     # model.add(
     #     MobileOneBlock(
@@ -509,8 +514,8 @@ if __name__ == "__main__":
     # print(model.layers[1]._layers)
     # print(model.layers[1]._layers[-1].weights)
 
-    model = reparameterize_model(model)
-    model.summary(expand_nested=True, show_trainable=True)
+    # model = reparameterize_model(model)
+    # model.summary(expand_nested=True, show_trainable=True)
 
     # print(model.layers[0]._layers)
     # # # print(model.layers[1]._layers)

@@ -114,8 +114,13 @@ if __name__ == "__main__":
     import numpy as np
 
     in_channels = 512
-    inp = np.random.randn(1, 16, 16, in_channels)
 
-    layer = MHSA(dim=in_channels, head_dim=32)
-    out = layer(inp)
-    print(out.shape)
+    inp = np.random.randn(1, 32, 32, in_channels)
+
+    layer = MHSA(dim=in_channels)
+
+    model = keras.Sequential()
+    model.add(keras.Input(shape=(None, None, in_channels)))
+    model.add(layer)
+
+    model.summary()

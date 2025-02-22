@@ -235,8 +235,8 @@ class RepMixer(keras_layer.Layer):
                 # self.layer_scale = self.add_weight(shape=(1, 1, self.dim), initializer=keras.initializers.Constant(self.layer_scale_init_value), trainable=True)
                 self.layer_scale_layer = LayerScale(
                     layer_scale_init_value=self.layer_scale_init_value,
-                    shape=(1, 1, dim),
-                    requires_grad=True,
+                    shape=(1, 1, self.dim),
+                    _requires_grad=True,
                 )
 
     def build(self, input_shape):
@@ -522,13 +522,13 @@ class AttentionBlock(keras_layer.Layer):
         if use_layer_scale:
             self.layer_scale_1 = LayerScale(
                 layer_scale_init_value=self.layer_scale_init_value,
-                shape=(1, 1, dim),
-                requires_grad=True,
+                shape=(1, 1, self.dim),
+                _requires_grad=True,
             )
             self.layer_scale_2 = LayerScale(
                 layer_scale_init_value=self.layer_scale_init_value,
-                shape=(1, 1, dim),
-                requires_grad=True,
+                shape=(1, 1, self.dim),
+                _requires_grad=True,
             )
 
     def build(self, input_shape):
@@ -627,3 +627,19 @@ def basic_blocks(
     blocks = keras.Sequential(layers=blocks)
 
     return blocks
+
+
+if __name__ == "__main__":
+    import numpy as np
+
+    in_channels = 32
+
+    inp = np.random.randn(1, 32, 32, in_channels)
+
+    layer = RepMixer(dim=in_channels)
+
+    model = keras.Sequential()
+    model.add(keras.Input(shape=(None, None, in_channels)))
+    model.add(layer)
+
+    model.summary()
