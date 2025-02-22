@@ -20,9 +20,10 @@ Cause why not?🤷🏻‍♂️
 
 ## Updates
 
-1. [2024-06-24] Released MobileViT v2 - All Image Classification variants.
-2. [2024-05-15] Fixed MobileViT v1 - Now works will all 3 backends. 🎉🎉
-3. [2024-05-04] Converted MobileViT to Keras 3 and released weights of all 3 variants.
+1. [2025-02-22] Working (v1) FastVit classification code added in the <a href="https://github.com/veb-101/keras-vision/tree/fastvit" target="_blank">repo</a> 
+2. [2024-06-24] Released MobileViT v2 - All Image Classification variants.
+3. [2024-05-15] Fixed MobileViT v1 - Now works will all 3 backends. 🎉🎉
+4. [2024-05-04] Converted MobileViT to Keras 3 and released weights of all 3 variants.
    1. Jax backend currently not working, I'm working on a fix.
    2. Release: <https://github.com/veb-101/keras-vision/releases/tag/v0.4>
 
