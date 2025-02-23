@@ -210,7 +210,7 @@ class MobileOneBlock(keras_layer.Layer):
         # Inference mode forward pass.
         if self.inference_mode:
             if self.zero_pad_infer is None:
-                return self.activation_layer(self.se(self.reparam_convx(x)))
+                return self.activation_layer(self.se(self.reparam_conv(x)))
             else:
                 return self.activation_layer(self.se(self.reparam_conv(self.zero_pad_infer(x))))
 
