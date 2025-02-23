@@ -1,5 +1,9 @@
 import os
 
+# os.environ["KERAS_BACKEND"] = "tensorflow"
+# os.environ["KERAS_BACKEND"] = "jax"
+# os.environ["KERAS_BACKEND"] = "torch"
+
 from functools import partial
 from typing import Tuple
 
@@ -13,6 +17,17 @@ from .base_layers import basic_blocks, PatchEmbed, convolutional_stem
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
+
+__all__ = [
+    "build_fastvit",
+    "fastvit_t8",
+    "fastvit_t12",
+    "fastvit_s12",
+    "fastvit_sa12",
+    "fastvit_sa24",
+    "fastvit_sa36",
+    "fastvit_ma36",
+]
 
 
 def build_fastvit(
@@ -142,7 +157,7 @@ def build_fastvit(
         if fork_feat and idx in out_indices:
             # norm_layer = getattr(self, f"norm{idx}")
             x_out = norm_layers[f"norm{idx}"](x)
-        outs.append(x_out)
+            outs.append(x_out)
 
     if fork_feat:
         # output the features of four stages for dense prediction
