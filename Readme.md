@@ -11,6 +11,7 @@ Cause why not?🤷🏻‍♂️
   - [Updates](#updates)
   - [Quick Setup](#quick-setup)
     - [Stable PyPi Package](#stable-pypi-package)
+    - [OR](#or)
     - [Latest Git Updates](#latest-git-updates)
   - [Models Supported](#models-supported)
 
@@ -20,10 +21,11 @@ Cause why not?🤷🏻‍♂️
 
 ## Updates
 
-1. [2025-02-22] Working (v1) FastVit classification code added in the <a href="https://github.com/veb-101/keras-vision/tree/fastvit" target="_blank">repo</a> 
-2. [2024-06-24] Released MobileViT v2 - All Image Classification variants.
-3. [2024-05-15] Fixed MobileViT v1 - Now works will all 3 backends. 🎉🎉
-4. [2024-05-04] Converted MobileViT to Keras 3 and released weights of all 3 variants.
+1. [2025-03-12] Finished adding **FastViT** image classification model by Apple added. The model weights are available at [url](https://huggingface.co/veb-101/apple-fastvit-Keras-3/tree/main).
+2. [2025-02-22] Working (v1) FastViT classification code added.
+3. [2024-06-24] Released MobileViT v2 - All Image Classification variants.
+4. [2024-05-15] Fixed MobileViT v1 - Now works will all 3 backends. 🎉🎉
+5. [2024-05-04] Converted MobileViT to Keras 3 and released weights of all 3 variants.
    1. Jax backend currently not working, I'm working on a fix.
    2. Release: <https://github.com/veb-101/keras-vision/releases/tag/v0.4>
 
@@ -102,6 +104,24 @@ pip install git+https://github.com/veb-101/keras-vision.git
          </td>
          <td style="text-align:center">
             <a href="https://github.com/veb-101/keras-vision/releases/tag/v0.5">Releases v0.5</a>
+         </td>
+      </tr>
+      <tr>
+         <td style="text-align:center">2</td>
+         <td style="text-align:center">
+            <a href="https://github.com/veb-101/keras-vision/blob/main/keras_vision/fastvit/fastvit.py">FastViT</a>
+         </td>
+         <td style="text-align:center">
+            <a href="https://arxiv.org/abs/2206.02680">FastViT: A Fast Hybrid Vision Transformer using Structural Reparameterization</a>
+         </td>
+         <td style="text-align:center">
+            --
+         </td>
+         <td style="text-align:center">
+            <a href="https://colab.research.google.com/github/veb-101/keras-vision/blob/main/examples/fastvit.ipynb">Colab link</a>
+         </td>
+         <td style="text-align:center">
+            <a href="https://huggingface.co/veb-101/apple-fastvit-Keras-3/tree/main">🤗</a>
          </td>
       </tr>
    </tbody>
