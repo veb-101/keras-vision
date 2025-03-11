@@ -24,9 +24,11 @@ class SEBlock(keras_layer.Layer):
             rd_ratio: Input channel reduction ratio.
         """
         super().__init__(**kwargs)
+        self.in_channels = in_channels
+        self.rd_ratio = rd_ratio
 
         self.reduce = keras_layer.Conv2D(
-            filters=int(in_channels * rd_ratio),
+            filters=int(self.in_channels * self.rd_ratio),
             kernel_size=1,
             strides=(1, 1),
             padding="valid",
@@ -34,7 +36,7 @@ class SEBlock(keras_layer.Layer):
         )
 
         self.expand = keras_layer.Conv2D(
-            filters=in_channels,
+            filters=self.in_channels,
             kernel_size=1,
             strides=(1, 1),
             padding="valid",
@@ -58,6 +60,17 @@ class SEBlock(keras_layer.Layer):
         x = self.expand(x)
         x = self.sigmoid(x)
         return inputs * x
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "in_channels": self.in_channels,
+                "rd_ratio": self.rd_ratio,
+            }
+        )
+
+        return config
 
 
 if __name__ == "__main__":

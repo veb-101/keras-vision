@@ -8,6 +8,9 @@ import keras
 from keras import layers as keras_layer
 from typing import Optional
 
+# import tensorflow as tf
+# from keras import ops as kops
+
 
 class ConvFFN(keras.Layer):
     """Convolutional FFN Module."""
@@ -39,14 +42,10 @@ class ConvFFN(keras.Layer):
 
         self.depth_multiplier = self.out_channels // self.in_channels
 
-        self.conv = keras.Sequential(
-            layers=[
-                keras_layer.Input(shape=(None, None, self.in_channels)),
-                keras_layer.ZeroPadding2D(padding=3),
-                keras_layer.DepthwiseConv2D(depth_multiplier=self.depth_multiplier, kernel_size=7, use_bias=False),
-                keras_layer.BatchNormalization(),
-            ]
-        )
+        self.conv_zero_pad = keras_layer.ZeroPadding2D(padding=3)
+        self.conv_depthwise = keras_layer.DepthwiseConv2D(depth_multiplier=self.depth_multiplier, kernel_size=7, use_bias=False)
+        self.conv_bn = keras_layer.BatchNormalization(epsilon=1e-5)
+
         kernel_initializer = keras.initializers.TruncatedNormal(stddev=0.02)
         bias_initializer = keras.initializers.Zeros()
 
@@ -66,12 +65,17 @@ class ConvFFN(keras.Layer):
         self.drop = keras_layer.Dropout(self.dropout_val)
 
     def call(self, x: keras.KerasTensor) -> keras.KerasTensor:
-        x = self.conv(x)
+        x = self.conv_zero_pad(x)
+        x = self.conv_depthwise(x)
+        x = self.conv_bn(x)
+
         x = self.fc1(x)
         x = self.act(x)
         x = self.drop(x)
-        x = self.fc2(x)
         x = self.drop(x)
+        x = self.fc2(x)
+        # tf.print(self.name, kops.sum(x))
+        # tf.print("--")
         return x
 
     def build(self, input_shape):

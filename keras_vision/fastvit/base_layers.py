@@ -6,6 +6,7 @@
 
 import gc
 
+# import tensorflow as tf
 import keras
 from keras import ops as kops
 from keras import layers as keras_layer
@@ -17,7 +18,7 @@ from .multihead_self_attention import MHSA
 from .conv_ffn import ConvFFN
 
 
-def convolutional_stem(in_channels: int, out_channels: int, inference_mode: bool = False) -> keras.Sequential:
+def convolutional_stem(in_channels: int, out_channels: int, inference_mode: bool = False, name="convolutional_stem") -> keras.Sequential:
     """Build convolutional stem with MobileOne blocks.
 
     Args:
@@ -40,6 +41,7 @@ def convolutional_stem(in_channels: int, out_channels: int, inference_mode: bool
                 inference_mode=inference_mode,
                 use_se=False,
                 num_conv_branches=1,
+                name=f"{name}_mobileone_1",
             ),
             MobileOneBlock(
                 in_channels=out_channels,
@@ -51,6 +53,7 @@ def convolutional_stem(in_channels: int, out_channels: int, inference_mode: bool
                 inference_mode=inference_mode,
                 use_se=False,
                 num_conv_branches=1,
+                name=f"{name}_mobileone_2",
             ),
             MobileOneBlock(
                 in_channels=out_channels,
@@ -62,10 +65,12 @@ def convolutional_stem(in_channels: int, out_channels: int, inference_mode: bool
                 inference_mode=inference_mode,
                 use_se=False,
                 num_conv_branches=1,
+                name=f"{name}_mobileone_3",
             ),
-        )
+        ),
+        name=name,
     )
-    conv_stem.build((None, None, None, in_channels))
+    # conv_stem.build((None, None, None, in_channels))
 
     return conv_stem
 
@@ -109,6 +114,7 @@ class PatchEmbed(keras_layer.Layer):
                 groups=self.in_channels,
                 small_kernel=3,
                 inference_mode=self.inference_mode,
+                name=f"{self.name}_rlkc",
             )
         )
         layers.append(
@@ -122,9 +128,10 @@ class PatchEmbed(keras_layer.Layer):
                 inference_mode=self.inference_mode,
                 use_se=False,
                 num_conv_branches=1,
+                name=f"{self.name}_mobileone",
             )
         )
-        self.proj = keras.Sequential(layers=layers)
+        self.proj = keras.Sequential(layers=layers, name=f"{self.name}_proj")
 
     def call(self, x: keras.KerasTensor) -> keras.KerasTensor:
         x = self.proj(x)
@@ -212,6 +219,14 @@ class RepMixer(keras_layer.Layer):
         if self.inference_mode:
             self._set_reparam_layers()
         else:
+            if use_layer_scale:
+                self.layer_scale_layer = LayerScale(
+                    layer_scale_init_value=self.layer_scale_init_value,
+                    shape=(1, 1, self.dim),
+                    _requires_grad=True,
+                    name=f"{self.name}_layer_scale",
+                )
+
             self.norm = MobileOneBlock(
                 in_channels=self.dim,
                 out_channels=self.dim,
@@ -221,6 +236,7 @@ class RepMixer(keras_layer.Layer):
                 use_act=False,
                 use_scale_branch=False,
                 num_conv_branches=0,
+                name=f"{self.name}_mobileone_1",
             )
             self.mixer = MobileOneBlock(
                 in_channels=self.dim,
@@ -229,15 +245,8 @@ class RepMixer(keras_layer.Layer):
                 padding=self.kernel_size // 2,
                 groups=self.dim,
                 use_act=False,
+                name=f"{self.name}_mobileone_2",
             )
-
-            if use_layer_scale:
-                # self.layer_scale = self.add_weight(shape=(1, 1, self.dim), initializer=keras.initializers.Constant(self.layer_scale_init_value), trainable=True)
-                self.layer_scale_layer = LayerScale(
-                    layer_scale_init_value=self.layer_scale_init_value,
-                    shape=(1, 1, self.dim),
-                    _requires_grad=True,
-                )
 
     def build(self, input_shape):
         self._set_reparam_layers()
@@ -253,6 +262,7 @@ class RepMixer(keras_layer.Layer):
                 x = x + self.layer_scale_layer(self.mixer(x) - self.norm(x))
             else:
                 x = x + self.mixer(x) - self.norm(x)
+            # tf.print(self.name, kops.sum(x))
             return x
 
     def _set_reparam_layers(self):
@@ -263,7 +273,7 @@ class RepMixer(keras_layer.Layer):
             strides=1,
             padding="valid",
             use_bias=True,
-            name="reparam_conv",
+            # name="reparam_conv",
         )
 
     def reparameterize(self) -> None:
@@ -293,15 +303,19 @@ class RepMixer(keras_layer.Layer):
         self.reparam_conv.build((None, None, None, self.dim))
         self.reparam_conv.set_weights([kernel, bias])
 
+        print(self._layers)
         self.__delattr__("mixer")
         self.__delattr__("norm")
+
         if self.use_layer_scale:
             self.__delattr__("layer_scale_layer")
 
-        layers_idx_to_remove = [idx for idx, layer in enumerate(self._layers) if "reparam_conv" not in layer.name]
+        # layers_idx_to_remove = [idx for idx, layer in enumerate(self._layers) if "reparam_conv" not in layer.name]
+        layers_idx_to_remove = [idx for idx, layer in enumerate(self._layers) if self.name in layer.name]
 
         for i in reversed(layers_idx_to_remove):
             del self._layers[i]
+        print(self._layers)
 
         gc.collect()
         self.inference_mode = True
@@ -403,12 +417,23 @@ class RepMixerBlock(keras_layer.Layer):
         self.layer_scale_init_value = layer_scale_init_value
         self.inference_mode = inference_mode
 
+        # Layer Scale
+        self.use_layer_scale = use_layer_scale
+        if use_layer_scale:
+            self.layer_scale_layer = LayerScale(
+                layer_scale_init_value=self.layer_scale_init_value,
+                shape=(1, 1, self.dim),
+                _requires_grad=True,
+                name=f"{self.name}_layer_scale",
+            )
+
         self.token_mixer = RepMixer(
             dim=self.dim,
             kernel_size=self.kernel_size,
             use_layer_scale=self.use_layer_scale,
             layer_scale_init_value=self.layer_scale_init_value,
             inference_mode=self.inference_mode,
+            name=f"{self.name}_repmixer",
         )
 
         mlp_hidden_dim = int(self.dim * self.mlp_ratio)
@@ -417,19 +442,11 @@ class RepMixerBlock(keras_layer.Layer):
             hidden_channels=mlp_hidden_dim,
             act_layer=self.act_layer,
             drop=self.drop,
+            name=f"{self.name}_convffn",
         )
 
         # Drop Path
         self.drop_path_layer = DropPath(self.drop_path) if drop_path > 0.0 else keras_layer.Identity()
-
-        # Layer Scale
-        self.use_layer_scale = use_layer_scale
-        if use_layer_scale:
-            self.layer_scale_layer = LayerScale(
-                layer_scale_init_value=self.layer_scale_init_value,
-                shape=(1, 1, self.dim),
-                _requires_grad=True,
-            )
 
     def build(self, input_shape):
         return super().build(input_shape)
@@ -441,6 +458,8 @@ class RepMixerBlock(keras_layer.Layer):
         else:
             x = self.token_mixer(x)
             x = x + self.drop_path_layer(self.convffn(x))
+
+        # tf.print(self.name, kops.sum(x))
         return x
 
     def get_config(self):
@@ -498,25 +517,9 @@ class AttentionBlock(keras_layer.Layer):
         self.act_layer = act_layer
         self.norm_layer = norm_layer
         self.drop = drop
-        self.drop_path = drop_path
+        self.drop_path_prob = drop_path
         self.use_layer_scale = use_layer_scale
         self.layer_scale_init_value = layer_scale_init_value
-
-        if self.norm_layer == "BatchNormalization":
-            self.norm = keras_layer.BatchNormalization()
-
-        self.token_mixer = MHSA(dim=self.dim)
-
-        mlp_hidden_dim = int(self.dim * self.mlp_ratio)
-        self.convffn = ConvFFN(
-            in_channels=self.dim,
-            hidden_channels=mlp_hidden_dim,
-            act_layer=self.act_layer,
-            drop=self.drop,
-        )
-
-        # Drop path
-        self.drop_path = DropPath(drop_prob=self.drop_path) if self.drop_path > 0.0 else keras_layer.Identity()
 
         # Layer Scale
         if use_layer_scale:
@@ -524,12 +527,31 @@ class AttentionBlock(keras_layer.Layer):
                 layer_scale_init_value=self.layer_scale_init_value,
                 shape=(1, 1, self.dim),
                 _requires_grad=True,
+                name=f"{self.name}_layer_scale_1",
             )
             self.layer_scale_2 = LayerScale(
                 layer_scale_init_value=self.layer_scale_init_value,
                 shape=(1, 1, self.dim),
                 _requires_grad=True,
+                name=f"{self.name}_layer_scale_2",
             )
+
+        if self.norm_layer == "BatchNormalization":
+            self.norm = keras_layer.BatchNormalization()
+
+        self.token_mixer = MHSA(dim=self.dim, name=f"{self.name}_MHSA")
+
+        mlp_hidden_dim = int(self.dim * self.mlp_ratio)
+        self.convffn = ConvFFN(
+            in_channels=self.dim,
+            hidden_channels=mlp_hidden_dim,
+            act_layer=self.act_layer,
+            drop=self.drop,
+            name=f"{self.name}_convffn",
+        )
+
+        # Drop path
+        self.drop_path = DropPath(drop_prob=self.drop_path_prob) if self.drop_path_prob > 0.0 else keras_layer.Identity()
 
     def build(self, input_shape):
         return super().build(input_shape)
@@ -551,7 +573,7 @@ class AttentionBlock(keras_layer.Layer):
         config["act_layer"] = self.act_layer
         config["norm_layer"] = self.norm_layer
         config["drop"] = self.drop
-        config["drop_path"] = self.drop_path
+        config["drop_path"] = self.drop_path_prob
         config["use_layer_scale"] = self.use_layer_scale
         config["layer_scale_init_value"] = self.layer_scale_init_value
         return config
@@ -571,6 +593,7 @@ def basic_blocks(
     use_layer_scale: bool = True,
     layer_scale_init_value: float = 1e-5,
     inference_mode=False,
+    name="basic_block",
 ) -> keras.Sequential:
     """Build FastViT blocks within a stage.
 
@@ -607,6 +630,7 @@ def basic_blocks(
                     use_layer_scale=use_layer_scale,
                     layer_scale_init_value=layer_scale_init_value,
                     inference_mode=inference_mode,
+                    name=f"{name}_idx_{block_idx}_repmixer",
                 )
             )
         elif token_mixer_type == "attention":
@@ -620,11 +644,12 @@ def basic_blocks(
                     drop_path=block_dpr,
                     use_layer_scale=use_layer_scale,
                     layer_scale_init_value=layer_scale_init_value,
+                    name=f"{name}_idx_{block_idx}_attention",
                 )
             )
         else:
             raise ValueError(f"Token mixer type: {token_mixer_type} not supported")
-    blocks = keras.Sequential(layers=blocks)
+    blocks = keras.Sequential(layers=blocks, name=name)
 
     return blocks
 
@@ -636,10 +661,12 @@ if __name__ == "__main__":
 
     inp = np.random.randn(1, 32, 32, in_channels)
 
-    layer = RepMixer(dim=in_channels)
+    # layer = RepMixer(dim=in_channels)
+    layer = convolutional_stem(in_channels=32, out_channels=32)
 
     model = keras.Sequential()
     model.add(keras.Input(shape=(None, None, in_channels)))
     model.add(layer)
 
     model.summary()
+    print(len(model.variables))

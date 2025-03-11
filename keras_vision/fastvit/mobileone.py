@@ -1,7 +1,8 @@
+# import os
 import gc
 from typing import Union, Tuple
 
-# import os
+# import tensorflow as tf
 
 # os.environ["KERAS_BACKEND"] = "tensorflow"
 # os.environ["KERAS_BACKEND"] = "jax"
@@ -82,11 +83,9 @@ class MobileOneBlock(keras_layer.Layer):
         self.se_layer_name = "se_layer"
         self.activation_layer_name = "activation_layer"
         self.rbr_skip_bn_branch_name = "rbr_skip_bn"
-        self.conv_branch_name = "conv_branch"
+        self.rbr_conv_branch_name = "rbr_conv_branch"
         self.rbr_scale_conv_branch_name = "rbr_scale_conv_branch"
 
-        self.reparam_pad_layer_name = "reparam_conv_pad"
-        self.reparam_conv_layer_name = "reparam_conv"
         #####################################################
 
         # name_prefix = kwargs["name"] if kwargs.get("name", None) else "mob"
@@ -117,15 +116,14 @@ class MobileOneBlock(keras_layer.Layer):
             # Re-parameterizable conv branches
             # nxn conv-bn branch - can be many
             if self.num_conv_branches > 0:
-
                 for i in range(self.num_conv_branches):
                     setattr(
                         self,
-                        f"{self.name}_{self.conv_branch_name}_{i}",
+                        f"{self.name}_{self.rbr_conv_branch_name}_{i}",
                         self._conv_bn(
                             kernel_size=self.kernel_size,
                             padding=self.padding,
-                            name=f"{self.name}_{self.conv_branch_name}_{i}",
+                            name=f"{self.name}_{self.rbr_conv_branch_name}_{i}",
                         ),
                     )
 
@@ -143,7 +141,7 @@ class MobileOneBlock(keras_layer.Layer):
                 )
 
     def _set_reparam_layers(self):
-        self.zero_pad_infer = keras_layer.ZeroPadding2D(padding=(1, 1), name=self.reparam_pad_layer_name) if self.padding == 1 else None
+        self.zero_pad_infer = keras_layer.ZeroPadding2D(padding=(1, 1)) if self.padding == 1 else None
         if self.conv_type == _CONV:
             self.reparam_conv = keras_layer.Conv2D(
                 filters=self.out_channels,
@@ -153,7 +151,6 @@ class MobileOneBlock(keras_layer.Layer):
                 dilation_rate=self.dilation,
                 groups=self.groups,
                 use_bias=True,
-                name=self.reparam_conv_layer_name,
             )
         else:
             self.reparam_conv = keras_layer.DepthwiseConv2D(
@@ -163,7 +160,6 @@ class MobileOneBlock(keras_layer.Layer):
                 padding="valid",
                 dilation_rate=self.dilation,
                 use_bias=True,
-                name=self.reparam_conv_layer_name,
             )
 
     def _conv_bn(self, kernel_size: int, padding: str, name: str):
@@ -229,9 +225,11 @@ class MobileOneBlock(keras_layer.Layer):
         out = scale_out + identity_out
         if self.num_conv_branches > 0:
             for ix in range(self.num_conv_branches):
-                out = getattr(self, f"{self.name}_{self.conv_branch_name}_{ix}")(x)
+                out = out + getattr(self, f"{self.name}_{self.rbr_conv_branch_name}_{ix}")(x)
 
-        return self.activation_layer(self.se(out))
+        out = self.activation_layer(self.se(out))
+        # tf.print(self.name, kops.sum(out))
+        return out
 
     def reparameterize(self):
         """Following works like `RepVGG: Making VGG-style ConvNets Great Again` -
@@ -252,16 +250,14 @@ class MobileOneBlock(keras_layer.Layer):
 
         if self.num_conv_branches > 0:
             for ix in range(self.num_conv_branches):
-                self.__delattr__(f"{self.name}_{self.conv_branch_name}_{ix}")
+                self.__delattr__(f"{self.name}_{self.rbr_conv_branch_name}_{ix}")
 
         self.__delattr__("rbr_scale")
         if hasattr(self, "rbr_skip"):
             self.__delattr__("rbr_skip")
 
-        # print(self._layers)
-
         # * Removing layers and their weights that were part of the original model.
-        # I can do this because I've provide specific names to those layers.
+        # * I can do this because I've provide specific names to those layers.
         layers_idx_to_remove = [idx for idx, layer in enumerate(self._layers) if self.name in layer.name]
 
         for i in reversed(layers_idx_to_remove):
@@ -308,7 +304,7 @@ class MobileOneBlock(keras_layer.Layer):
         bias_conv = 0.0
         if self.num_conv_branches > 0:
             for ix in range(self.num_conv_branches):
-                _kernel, _bias = self._fuse_bn_tensor(getattr(self, f"{self.name}_{self.conv_branch_name}_{ix}"))
+                _kernel, _bias = self._fuse_bn_tensor(getattr(self, f"{self.name}_{self.rbr_conv_branch_name}_{ix}"))
                 kernel_conv += _kernel
                 bias_conv += _bias
 
@@ -480,10 +476,11 @@ if __name__ == "__main__":
         kernel_size=3,
         stride=1,
         padding=1,
-        groups=384,
+        groups=in_channels,
         inference_mode=False,
         use_se=True,
         num_conv_branches=1,
+        name="mob_1",
     )
 
     layer(inp)
@@ -499,23 +496,59 @@ if __name__ == "__main__":
     #         kernel_size=3,
     #         stride=1,
     #         padding=1,
-    #         groups=in_channels,
-    #         use_se=False,
+    #         groups=1,
+    #         use_se=True,
     #         num_conv_branches=2,
     #         name="mob_2",
     #     )
     # )
 
+    # model.summary(expand_nested=True, show_trainable=True)
+    # for i in model.variables:
+    #     # print(dir(i))
+    #     print(i.path)
+    #     # break
+
+    # # for i in model._get_variable_map():
+    # print(model._get_variable_map().keys())
+    # for i in model._get_variable_map().keys():
+    #     print(i)
+
+    # model.save_weights("test_variables.weights.h5")
+
+    # # ============================================================
+    # print("---------------------")
+
+    # layer = MobileOneBlock(
+    #     in_channels=in_channels,
+    #     out_channels=int(in_channels * 2.0),
+    #     kernel_size=3,
+    #     stride=1,
+    #     padding=1,
+    #     groups=1,
+    #     inference_mode=False,
+    #     use_se=True,
+    #     num_conv_branches=1,
+    #     name="mob_1",
+    # )
+
+    # layer(inp)
+
+    # model = keras.Sequential()
+    # model.add(keras.Input(shape=(None, None, in_channels)))
+    # model.add(layer)
+
+    # for i in model._get_variable_map().keys():
+    #     print(i)
+    # model.load_weights("test_variables.weights.h5")
+    # # print(model.layers[1]._layers)
+    # # print(model.layers[0]._layers[-1].weights)
+
+    # # print(model.layers[1]._layers)
+    # # print(model.layers[1]._layers[-1].weights)
+
+    model = reparameterize_model(model)
     model.summary(expand_nested=True, show_trainable=True)
 
-    # print(model.layers[1]._layers)
-    # print(model.layers[0]._layers[-1].weights)
-
-    # print(model.layers[1]._layers)
-    # print(model.layers[1]._layers[-1].weights)
-
-    # model = reparameterize_model(model)
-    # model.summary(expand_nested=True, show_trainable=True)
-
-    # print(model.layers[0]._layers)
-    # # # print(model.layers[1]._layers)
+    # # print(model.layers[0]._layers)
+    # # # # print(model.layers[1]._layers)

@@ -1,7 +1,6 @@
+# import os
 import gc
 from typing import Tuple
-
-# import os
 
 # os.environ["KERAS_BACKEND"] = "tensorflow"
 # os.environ["KERAS_BACKEND"] = "jax"
@@ -70,16 +69,12 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         self.se_layer_name = "se_layer"
         self.activation_layer_name = "activation_layer"
 
-        self.reparam_pad_layer_name = "reparam_lkbconv_pad"
-        self.reparam_conv_layer_name = "reparam_lkbconv"
         # Conv type to use.
         self.conv_type = _DEPTHWISE_CONV if self.groups == self.in_channels else _CONV
         if self.conv_type == _DEPTHWISE_CONV:
             # When out_channels is a multiple of in_channels, the conv kernel's shape is (kH,kW, in_channel, depth_multiplier)
             # As it's a calculation that will be used many times, we make it as part of the initialization to make it more verbose.
             self.depth_multiplier = self.out_channels // self.in_channels
-
-        # print("self.conv_type", self.conv_type)
 
         if self.inference_mode:
             self._set_reparam_layers()
@@ -100,7 +95,7 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         )
 
     def _set_reparam_layers(self):
-        self.lkb_reparam_zero_pad = keras_layer.ZeroPadding2D(padding=self.padding, name=self.reparam_pad_layer_name) if self.padding else None
+        self.lkb_reparam_zero_pad = keras_layer.ZeroPadding2D(padding=self.padding) if self.padding else None
 
         if self.conv_type == _CONV:
             self.lkb_reparam = keras_layer.Conv2D(
@@ -110,7 +105,6 @@ class ReparamLargeKernelConv(keras_layer.Layer):
                 padding="valid",
                 groups=self.groups,
                 use_bias=True,
-                name=self.reparam_conv_layer_name,
             )
         else:
             self.lkb_reparam = keras_layer.DepthwiseConv2D(
@@ -119,7 +113,6 @@ class ReparamLargeKernelConv(keras_layer.Layer):
                 strides=self.stride,
                 padding="valid",
                 use_bias=True,
-                name=self.reparam_conv_layer_name,
             )
 
     def _conv_bn(self, kernel_size: int, padding: str, name: str):
@@ -158,8 +151,6 @@ class ReparamLargeKernelConv(keras_layer.Layer):
 
         conv_bn_mod.add(conv_layer)
         conv_bn_mod.add(keras_layer.BatchNormalization(epsilon=1e-5))
-        # conv_bn_mod.build((None, None, None, 16))
-        # conv_bn_mod.summary()
 
         return conv_bn_mod
 
@@ -194,8 +185,6 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         self.__delattr__("lkb_origin")
         if hasattr(self, "small_conv"):
             self.__delattr__("small_conv")
-
-        print(self._layers)
 
         # * Removing layers and their weights that were part of the original model.
         # I can do this because I've provide specific names to those layers.
@@ -264,7 +253,7 @@ class ReparamLargeKernelConv(keras_layer.Layer):
         t = kops.divide(gamma, std)
         t = kops.reshape(t, _kernel_multiplier_reshape_dims)
 
-        print(kernel.shape, t.shape)
+        # print(kernel.shape, t.shape)
         return kops.multiply(kernel, t), kops.multiply(beta - running_mean, kops.divide(gamma, std))
 
     def build(self, input_shape):
@@ -301,9 +290,6 @@ def reparameterize_model(model: keras.Model | keras.Sequential) -> keras.Model |
     Returns:
         MobileOne model in inference mode.
     """
-    # # Avoid editing original graph
-    # model = copy.deepcopy(model)
-
     for module in model.layers:
         if hasattr(module, "reparameterize"):
             module.reparameterize()
@@ -343,8 +329,8 @@ if __name__ == "__main__":
 
     # # print(model.layers[1]._layers)
     # # # print(model.layers[1]._layers[-1].weights)
-    model = reparameterize_model(model)
-    model.summary()
+    # model = reparameterize_model(model)
+    # model.summary()
 
     # print(model.layers[0]._layers)
     # # # print(model.layers[1]._layers)
