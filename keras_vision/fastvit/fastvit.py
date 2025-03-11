@@ -32,10 +32,13 @@ __all__ = [
 ]
 
 WEIGHTS_URL = r"https://huggingface.co/veb-101/apple-fastvit-Keras-3/resolve/main/{weight_file_name}"
+
+
+"""
+# Unused so far
+
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
-
-
 def _cfg(url="", **kwargs):
     return {
         "url": url,
@@ -56,6 +59,7 @@ default_cfgs = {
     "fastvit_s": _cfg(crop_pct=0.9),
     "fastvit_m": _cfg(crop_pct=0.95),
 }
+"""
 
 
 def build_fastvit(
@@ -260,7 +264,26 @@ def fastvit_t8(
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
-    """Instantiate FastViT-T8 model variant."""
+    """
+    Instantiate FastViT-T8 model varian or feature extractor with optional pretrained weights.
+
+    Params:
+        pretrained: (bool) Whether to load pretrained weights
+
+        inference_mode: (bool) Whether to load fused fastvit model
+
+        num_classes: (int)   Number of output classes
+
+        include_top: (bool) Whether to include the classification layers
+
+        input_shape: (tuple) Input shape -> H, W, C
+
+        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+
+        cache_dir: (str) Local directory to cache the downloaded weights
+
+    """
+
     layers = [2, 2, 4, 2]
     embed_dims = [48, 96, 192, 384]
     mlp_ratios = [3, 3, 3, 3]
@@ -300,7 +323,26 @@ def fastvit_t12(
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
-    """Instantiate FastViT-T12 model variant."""
+    """
+    Instantiate FastViT-T12 model varian or feature extractor with optional pretrained weights.
+
+    Params:
+        pretrained: (bool) Whether to load pretrained weights
+
+        inference_mode: (bool) Whether to load fused fastvit model
+
+        num_classes: (int)   Number of output classes
+
+        include_top: (bool) Whether to include the classification layers
+
+        input_shape: (tuple) Input shape -> H, W, C
+
+        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+
+        cache_dir: (str) Local directory to cache the downloaded weights
+
+    """
+
     layers = [2, 2, 6, 2]
     embed_dims = [64, 128, 256, 512]
     mlp_ratios = [3, 3, 3, 3]
@@ -340,7 +382,26 @@ def fastvit_s12(
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
-    """Instantiate FastViT-S12 model variant."""
+    """
+    Instantiate FastViT-S12 model varian or feature extractor with optional pretrained weights.
+
+    Params:
+        pretrained: (bool) Whether to load pretrained weights
+
+        inference_mode: (bool) Whether to load fused fastvit model
+
+        num_classes: (int)   Number of output classes
+
+        include_top: (bool) Whether to include the classification layers
+
+        input_shape: (tuple) Input shape -> H, W, C
+
+        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+
+        cache_dir: (str) Local directory to cache the downloaded weights
+
+    """
+
     layers = [2, 2, 6, 2]
     embed_dims = [64, 128, 256, 512]
     mlp_ratios = [4, 4, 4, 4]
@@ -380,7 +441,26 @@ def fastvit_sa12(
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
-    """Instantiate FastViT-SA12 model variant."""
+    """
+    Instantiate FastViT-SA12 model varian or feature extractor with optional pretrained weights.
+
+    Params:
+        pretrained: (bool) Whether to load pretrained weights
+
+        inference_mode: (bool) Whether to load fused fastvit model
+
+        num_classes: (int)   Number of output classes
+
+        include_top: (bool) Whether to include the classification layers
+
+        input_shape: (tuple) Input shape -> H, W, C
+
+        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+
+        cache_dir: (str) Local directory to cache the downloaded weights
+
+    """
+
     layers = [2, 2, 6, 2]
     embed_dims = [64, 128, 256, 512]
     mlp_ratios = [4, 4, 4, 4]
@@ -423,7 +503,26 @@ def fastvit_sa24(
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
-    """Instantiate FastViT-SA24 model variant."""
+    """
+    Instantiate FastViT-SA24 model varian or feature extractor with optional pretrained weights.
+
+    Params:
+        pretrained: (bool) Whether to load pretrained weights
+
+        inference_mode: (bool) Whether to load fused fastvit model
+
+        num_classes: (int)   Number of output classes
+
+        include_top: (bool) Whether to include the classification layers
+
+        input_shape: (tuple) Input shape -> H, W, C
+
+        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+
+        cache_dir: (str) Local directory to cache the downloaded weights
+
+    """
+
     layers = [4, 4, 12, 4]
     embed_dims = [64, 128, 256, 512]
     mlp_ratios = [4, 4, 4, 4]
@@ -464,7 +563,26 @@ def fastvit_sa36(
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
-    """Instantiate FastViT-SA36 model variant."""
+    """
+    Instantiate FastViT-SA36 model varian or feature extractor with optional pretrained weights.
+
+    Params:
+        pretrained: (bool) Whether to load pretrained weights
+
+        inference_mode: (bool) Whether to load fused fastvit model
+
+        num_classes: (int)   Number of output classes
+
+        include_top: (bool) Whether to include the classification layers
+
+        input_shape: (tuple) Input shape -> H, W, C
+
+        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+
+        cache_dir: (str) Local directory to cache the downloaded weights
+
+    """
+
     layers = [6, 6, 18, 6]
     embed_dims = [64, 128, 256, 512]
     mlp_ratios = [4, 4, 4, 4]
@@ -507,7 +625,26 @@ def fastvit_ma36(
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
-    """Instantiate FastViT-MA36 model variant."""
+    """
+    Instantiate FastViT-MA36 model varian or feature extractor with optional pretrained weights.
+
+    Params:
+        pretrained: (bool) Whether to load pretrained weights
+
+        inference_mode: (bool) Whether to load fused fastvit model
+
+        num_classes: (int)   Number of output classes
+
+        include_top: (bool) Whether to include the classification layers
+
+        input_shape: (tuple) Input shape -> H, W, C
+
+        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+
+        cache_dir: (str) Local directory to cache the downloaded weights
+
+    """
+
     layers = [6, 6, 18, 6]
     embed_dims = [76, 152, 304, 608]
     mlp_ratios = [4, 4, 4, 4]
