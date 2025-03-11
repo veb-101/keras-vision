@@ -272,7 +272,7 @@ def fastvit_t8(
 
         inference_mode: (bool) Whether to load fused fastvit model
 
-        num_classes: (int)   Number of output classes
+        num_classes: (int) Number of output classes
 
         include_top: (bool) Whether to include the classification layers
 
@@ -331,7 +331,7 @@ def fastvit_t12(
 
         inference_mode: (bool) Whether to load fused fastvit model
 
-        num_classes: (int)   Number of output classes
+        num_classes: (int) Number of output classes
 
         include_top: (bool) Whether to include the classification layers
 
@@ -390,7 +390,7 @@ def fastvit_s12(
 
         inference_mode: (bool) Whether to load fused fastvit model
 
-        num_classes: (int)   Number of output classes
+        num_classes: (int) Number of output classes
 
         include_top: (bool) Whether to include the classification layers
 
@@ -449,7 +449,7 @@ def fastvit_sa12(
 
         inference_mode: (bool) Whether to load fused fastvit model
 
-        num_classes: (int)   Number of output classes
+        num_classes: (int) Number of output classes
 
         include_top: (bool) Whether to include the classification layers
 
@@ -511,7 +511,7 @@ def fastvit_sa24(
 
         inference_mode: (bool) Whether to load fused fastvit model
 
-        num_classes: (int)   Number of output classes
+        num_classes: (int) Number of output classes
 
         include_top: (bool) Whether to include the classification layers
 
@@ -571,7 +571,7 @@ def fastvit_sa36(
 
         inference_mode: (bool) Whether to load fused fastvit model
 
-        num_classes: (int)   Number of output classes
+        num_classes: (int) Number of output classes
 
         include_top: (bool) Whether to include the classification layers
 
@@ -633,7 +633,7 @@ def fastvit_ma36(
 
         inference_mode: (bool) Whether to load fused fastvit model
 
-        num_classes: (int)   Number of output classes
+        num_classes: (int) Number of output classes
 
         include_top: (bool) Whether to include the classification layers
 
