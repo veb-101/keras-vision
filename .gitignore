@@ -15,3 +15,4 @@ test_pytorch_layer.py
 minimal_example.py
 Keras3_MobileVIT_v1.ipynb
 extras.py
+settings.json
