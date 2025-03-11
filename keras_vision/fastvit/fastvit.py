@@ -265,7 +265,7 @@ def fastvit_t8(
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
     """
-    Instantiate FastViT-T8 model varian or feature extractor with optional pretrained weights.
+    Instantiate FastViT-T8 model variant or feature extractor with optional pretrained weights.
 
     Params:
         pretrained: (bool) Whether to load pretrained weights
@@ -324,7 +324,7 @@ def fastvit_t12(
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
     """
-    Instantiate FastViT-T12 model varian or feature extractor with optional pretrained weights.
+    Instantiate FastViT-T12 model variant or feature extractor with optional pretrained weights.
 
     Params:
         pretrained: (bool) Whether to load pretrained weights
@@ -383,7 +383,7 @@ def fastvit_s12(
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
     """
-    Instantiate FastViT-S12 model varian or feature extractor with optional pretrained weights.
+    Instantiate FastViT-S12 model variant or feature extractor with optional pretrained weights.
 
     Params:
         pretrained: (bool) Whether to load pretrained weights
@@ -442,7 +442,7 @@ def fastvit_sa12(
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
     """
-    Instantiate FastViT-SA12 model varian or feature extractor with optional pretrained weights.
+    Instantiate FastViT-SA12 model variant or feature extractor with optional pretrained weights.
 
     Params:
         pretrained: (bool) Whether to load pretrained weights
@@ -504,7 +504,7 @@ def fastvit_sa24(
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
     """
-    Instantiate FastViT-SA24 model varian or feature extractor with optional pretrained weights.
+    Instantiate FastViT-SA24 model variant or feature extractor with optional pretrained weights.
 
     Params:
         pretrained: (bool) Whether to load pretrained weights
@@ -564,7 +564,7 @@ def fastvit_sa36(
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
     """
-    Instantiate FastViT-SA36 model varian or feature extractor with optional pretrained weights.
+    Instantiate FastViT-SA36 model variant or feature extractor with optional pretrained weights.
 
     Params:
         pretrained: (bool) Whether to load pretrained weights
@@ -626,7 +626,7 @@ def fastvit_ma36(
     cache_dir: Optional[str] = None,  # Local cache directory for weights
 ) -> keras.Model:
     """
-    Instantiate FastViT-MA36 model varian or feature extractor with optional pretrained weights.
+    Instantiate FastViT-MA36 model variant or feature extractor with optional pretrained weights.
 
     Params:
         pretrained: (bool) Whether to load pretrained weights
