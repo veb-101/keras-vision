@@ -6,4 +6,5 @@ from keras_vision.fastvit.fastvit import (
     fastvit_sa24,
     fastvit_sa36,
     fastvit_ma36,
+    reparameterize_model,
 )
