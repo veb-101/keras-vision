@@ -11,7 +11,6 @@ Cause why not?🤷🏻‍♂️
   - [Updates](#updates)
   - [Quick Setup](#quick-setup)
     - [Stable PyPi Package](#stable-pypi-package)
-    - [OR](#or)
     - [Latest Git Updates](#latest-git-updates)
   - [Models Supported](#models-supported)
 
