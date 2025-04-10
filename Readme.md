@@ -11,6 +11,7 @@ Cause why not?🤷🏻‍♂️
   - [Updates](#updates)
   - [Quick Setup](#quick-setup)
     - [Stable PyPi Package](#stable-pypi-package)
+    - [OR](#or)
     - [Latest Git Updates](#latest-git-updates)
   - [Models Supported](#models-supported)
 
@@ -85,7 +86,7 @@ pip install git+https://github.com/veb-101/keras-vision.git
             <a href="https://colab.research.google.com/github/veb-101/keras-vision/blob/main/examples/mobile_vit_v1.ipynb">Colab link</a>
          </td>
          <td style="text-align:center">
-            <a href="https://github.com/veb-101/keras-vision/releases/tag/v0.4">Releases v0.4</a>
+            <a href="https://huggingface.co/veb-101/Keras-3-apple-mobilevit/tree/main/keras-3-mobilevit-v1-weights">🤗</a>
          </td>
       <tr>
          <td style="text-align:center">2</td>
@@ -102,7 +103,7 @@ pip install git+https://github.com/veb-101/keras-vision.git
             <a href="https://colab.research.google.com/github/veb-101/keras-vision/blob/main/examples/mobile_vit_v2.ipynb">Colab link</a>
          </td>
          <td style="text-align:center">
-            <a href="https://github.com/veb-101/keras-vision/releases/tag/v0.5">Releases v0.5</a>
+            <a href="https://huggingface.co/veb-101/Keras-3-apple-mobilevit/tree/main/keras-3-mobilevit-v2-weights">🤗</a>
          </td>
       </tr>
       <tr>
