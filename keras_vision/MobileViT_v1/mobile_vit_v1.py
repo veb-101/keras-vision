@@ -2,18 +2,18 @@ import warnings
 from typing import Optional
 
 import numpy as np
-import keras.ops as kops
 from keras import Model, Input
-from keras.layers import GlobalAveragePooling2D, Dropout, Dense
-from keras.utils import get_file
+from keras import layers as keras_layer
+from keras import utils
 
 from .configs import get_mobile_vit_v1_configs
 from .base_layers import ConvLayer, InvertedResidualBlock
 
 from .mobile_vit_v1_block import MobileViT_v1_Block
 
-VERSION = 0.4
-WEIGHTS_URL = "https://github.com/veb-101/keras-vision/releases/download/v{version}/keras_MobileVIT_v1_model_{model_type}.weights.h5"
+WEIGHTS_URL = (
+    r"https://huggingface.co/veb-101/Keras-3-apple-mobilevit/resolve/main/keras-3-mobilevit-v1-weights/keras_MobileVIT_v1_model_{model_type}.weights.h5"
+)
 
 
 def MobileViT_v1(
@@ -22,22 +22,47 @@ def MobileViT_v1(
     attention_drop: float = 0.0,
     dropout: float = 0.0,
     num_classes: int | None = 1000,
+    classifier_head_activation: str = "linear",
     input_shape: tuple[int, int, int] = (256, 256, 3),
-    model_name: str = f"MobileViT_v1-S",
+    model_name: str = "MobileViT_v1-S",
 ):
     """
-    Arguments
-    --------
+    Build the MobileViT-v1 model architecture.
 
-        configs: A dataclass instance with model information such as per layer output channels, transformer embedding dimensions, transformer repeats, IR expansion factor
-        num_classes: (int) Number of output classes
-        input_shape: (tuple) Input shape -> H, W, C
-        model_type: (str) Model to create
-        linear_drop: (float) Dropout rate used for MHSA output and Transformer Dense block
-        attention_drop: (float) Dropout rate for the attention matrix
-        dropout: (float) Additional Dropout rate used in Transformer Dense block.
+    Args:
+        configs (dataclass): A dataclass instance containing model information such as per-layer output channels, transformer embedding dimensions, transformer repeats, and IR expansion factor.
+
+        linear_drop (float): Dropout rate for the Dense layers. Default is 0.1
+
+        attention_drop (float): Dropout rate for the attention matrix. Default is 0.0
+
+        dropout (float): Dropout rate to be applied between different layers. Default is 0.0
+
+        num_classes (int): The number of output classes for the classification task. If None, no classification layer is added. Default is 1000.
+
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
+
+        input_shape (tuple): The shape of the input data in the format (height, width, channels). Default is (256, 256, 3).
+
+        model_name (str): The name of the model. Default is "MobileViT-v1-S".
+
+    Returns:
+        keras.Model: The constructed MobileViT-v1 model instance.
+
+    Example
+    -------
+    >>> configs = get_mobile_vit_v1_configs(model_type="S")
+    >>> model = MobileViT_v1(
+            configs=configs,
+            linear_drop=0.1,
+            attention_drop=0.1,
+            dropout=0.2,
+            num_classes=1000,
+            input_shape=(256, 256, 3),
+            model_name=f"MobileViT_v1-S",
+        )
+    >>> model.summary()
     """
-
     input_layer = Input(shape=input_shape)
 
     # Block 1
@@ -142,12 +167,13 @@ def MobileViT_v1(
 
     if num_classes:
         # Output layer
-        out = GlobalAveragePooling2D()(out)
+        out = keras_layer.GlobalAveragePooling2D()(out)
 
         if linear_drop > 0.0:
-            out = Dropout(rate=dropout)(out)
+            out = keras_layer.Dropout(rate=dropout)(out)
 
-        out = Dense(units=num_classes)(out)
+        out = keras_layer.Dense(units=num_classes, activation=classifier_head_activation)(out)
+        out = keras_layer.Activation(activation=classifier_head_activation, name=f"Activation('{classifier_head_activation}')")(out)
 
     model = Model(inputs=input_layer, outputs=out, name=model_name)
 
@@ -157,6 +183,7 @@ def MobileViT_v1(
 def build_MobileViT_v1(
     model_type: str = "S",
     num_classes: int = 1000,
+    classifier_head_activation: str = "linear",
     input_shape: tuple = (256, 256, 3),
     include_top: bool = True,  # Whether to include the classification layer in the model
     pretrained: bool = False,  # Whether to load pretrained weights
@@ -165,23 +192,44 @@ def build_MobileViT_v1(
     **kwargs,
 ):
     """
-    Create MobileViT-v1 Classification models or feature extractors with optional pretrained weights.
+    Build a MobileViT-v1 classification model.
 
-    Arguments:
+    Args:
+        model_type (str): MobileViT version to create. Options: S, XS, XXS
+
+        num_classes (int): Number of output classes
+
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
+
+        input_shape (tuple): Input shape -> H, W, C
+
+        include_top (bool): Whether to include the classification layers
+
+        pretrained (bool): Whether to load pretrained weights
+
+        cache_dir (str): Local directory to cache the downloaded weights
+
+        updates (dict): a key-value pair indicating the changes to be made to the base model.
+
+    Optional Args
     ---------
-        model_type: (str)   MobileViT version to create. Options: S, XS, XXS
-        num_classes: (int)   Number of output classes
-        input_shape: (tuple) Input shape -> H, W, C
-        include_top: (bool) Whether to include the classification layers
-        pretrained: (bool) Whether to load pretrained weights
-        cache_dir: (str) Local directory to cache the downloaded weights
-        updates: (dict) a key-value pair indicating the changes to be made to the base model.
+        linear_drop (float): Dropout rate used for MHSA output and Transformer Dense block
+        attention_drop (float): Dropout rate for the attention matrix
+        dropout (float): Additional Dropout rate used in Transformer Dense block.
 
-    Additional arguments:
-    ---------------------
-        linear_drop: (float) Dropout rate used for MHSA output and Transformer Dense block
-        attention_drop: (float) Dropout rate for the attention matrix
-        dropout: (float) Additional Dropout rate used in Transformer Dense block.
+    Returns:
+        keras.Model: The constructed MobileViT-v1 model instance.
+
+    Example
+    -------
+    >>> model = build_MobileViT_v1(
+            model_type="S",
+            num_classes=1000,
+            input_shape=(256, 256, 3),
+            include_top=True,
+            pretrained=True,
+        )
+    >>> model.summary()
     """
 
     model_type = model_type.upper()
@@ -194,6 +242,7 @@ def build_MobileViT_v1(
     model = MobileViT_v1(
         configs=updated_configs,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name=f"MobileViT_v1-{model_type}",
         **kwargs,
@@ -208,9 +257,9 @@ def build_MobileViT_v1(
     model(np.random.randn(*dummy_input_shape), training=False)
 
     if pretrained:
-        weights_path = get_file(
+        weights_path = utils.get_file(
             fname=f"keras_MobileVIT_v1_model_{model_type}.weights.h5",
-            origin=WEIGHTS_URL.format(version=VERSION, model_type=model_type),
+            origin=WEIGHTS_URL.format(model_type=model_type),
             cache_subdir="models",
             hash_algorithm="auto",
             extract=False,
@@ -218,10 +267,10 @@ def build_MobileViT_v1(
             cache_dir=cache_dir,
         )
 
-        with warnings.catch_warnings():
-            # Ignore UserWarnings within this block
-            warnings.simplefilter("ignore", UserWarning)
-            model.load_weights(weights_path, skip_mismatch=True)
+        # with warnings.catch_warnings():
+        #     # Ignore UserWarnings within this block
+        #     warnings.simplefilter("ignore", UserWarning)
+        model.load_weights(weights_path, skip_mismatch=True)
 
     return model
 

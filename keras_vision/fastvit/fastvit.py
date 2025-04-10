@@ -81,6 +81,7 @@ def build_fastvit(
     fork_feat=False,
     cls_ratio: float = 2.0,
     inference_mode: bool = False,
+    classifier_head_activation: str = "linear",  # softmax
     input_shape: Tuple[int | None] = (None, None, 3),
     num_classes: int = 1000,
     model_name: str = "fastvit",
@@ -181,7 +182,13 @@ def build_fastvit(
         if isinstance(num_classes, int) and num_classes > 0:
             kernel_initializer = keras.initializers.TruncatedNormal(stddev=0.02)
             bias_initializer = keras.initializers.Zeros()
-            head = keras_layer.Dense(num_classes, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, name="head")
+            final_dense = keras_layer.Dense(
+                num_classes,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="head",
+            )
+            head = keras_layer.Activation(activation=classifier_head_activation, name=f"Activation('{classifier_head_activation}')")
         else:
             head = keras_layer.Identity(name="head")
 
@@ -208,9 +215,14 @@ def build_fastvit(
 
     x = conv_exp(x)
     x = gap(x)
-    cls_out = head(x)
+
+    if isinstance(num_classes, int) and num_classes > 0:
+        x = final_dense(x)
+
+    out = head(x)
+
     # Create and return the model
-    model = keras.Model(inputs=inputs, outputs=cls_out, name=model_name)
+    model = keras.Model(inputs=inputs, outputs=out, name=model_name)
     return model
 
 
@@ -247,10 +259,10 @@ def _load_weights(
         cache_dir=cache_dir,
     )
 
-    with warnings.catch_warnings():
-        # Ignore UserWarnings within this block
-        warnings.simplefilter("ignore", UserWarning)
-        model.load_weights(weights_path, skip_mismatch=True)
+    # with warnings.catch_warnings():
+    #     # Ignore UserWarnings within this block
+    #     warnings.simplefilter("ignore", UserWarning)
+    model.load_weights(weights_path, skip_mismatch=True)
 
     return model
 
@@ -260,6 +272,7 @@ def fastvit_t8(
     inference_mode=False,
     num_classes=1000,
     include_top: bool = True,
+    classifier_head_activation: str = "linear",
     input_shape=(None, None, 3),
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
@@ -267,21 +280,25 @@ def fastvit_t8(
     """
     Instantiate FastViT-T8 model variant or feature extractor with optional pretrained weights.
 
-    Params:
-        pretrained: (bool) Whether to load pretrained weights
+    Args:
+        pretrained (bool): Whether to load pretrained weights
 
-        inference_mode: (bool) Whether to load fused fastvit model
+        inference_mode (bool): Whether to load fused fastvit model
 
-        num_classes: (int) Number of output classes
+        num_classes (int): Number of output classes
 
-        include_top: (bool) Whether to include the classification layers
+        include_top (bool): Whether to include the classification layers
 
-        input_shape: (tuple) Input shape -> H, W, C
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+        input_shape (tuple): Input shape -> H, W, C
 
-        cache_dir: (str) Local directory to cache the downloaded weights
+        load_kd_weights (bool): Load knowledge distillation trained model weights if `pretrained=True`.
 
+        cache_dir (str): Local directory to cache the downloaded weights
+
+    Returns:
+        keras.Model: The constructed fastvit-t8 keras model instance.
     """
 
     layers = [2, 2, 4, 2]
@@ -298,10 +315,12 @@ def fastvit_t8(
         mlp_ratios=mlp_ratios,
         downsamples=downsamples,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name="fastvit_t8",
         inference_mode=inference_mode,
     )
+
     if pretrained:
         model = _load_weights(
             model=model,
@@ -319,6 +338,7 @@ def fastvit_t12(
     inference_mode=False,
     num_classes=1000,
     include_top: bool = True,
+    classifier_head_activation: str = "linear",
     input_shape=(None, None, 3),
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
@@ -326,21 +346,25 @@ def fastvit_t12(
     """
     Instantiate FastViT-T12 model variant or feature extractor with optional pretrained weights.
 
-    Params:
-        pretrained: (bool) Whether to load pretrained weights
+    Args:
+        pretrained (bool): Whether to load pretrained weights
 
-        inference_mode: (bool) Whether to load fused fastvit model
+        inference_mode (bool): Whether to load fused fastvit model
 
-        num_classes: (int) Number of output classes
+        num_classes (int): Number of output classes
 
-        include_top: (bool) Whether to include the classification layers
+        include_top (bool): Whether to include the classification layers
 
-        input_shape: (tuple) Input shape -> H, W, C
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+        input_shape (tuple): Input shape -> H, W, C
 
-        cache_dir: (str) Local directory to cache the downloaded weights
+        load_kd_weights (bool): Load knowledge distillation trained model weights if `pretrained=True`.
 
+        cache_dir (str): Local directory to cache the downloaded weights
+
+    Returns:
+        keras.Model: The constructed fastvit-t12 keras model instance.
     """
 
     layers = [2, 2, 6, 2]
@@ -357,6 +381,7 @@ def fastvit_t12(
         mlp_ratios=mlp_ratios,
         downsamples=downsamples,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name="fastvit_t12",
         inference_mode=inference_mode,
@@ -370,6 +395,7 @@ def fastvit_t12(
             cache_dir=cache_dir,
             inference_mode=inference_mode,
         )
+
     return model
 
 
@@ -378,6 +404,7 @@ def fastvit_s12(
     inference_mode=False,
     num_classes=1000,
     include_top: bool = True,
+    classifier_head_activation: str = "linear",
     input_shape=(None, None, 3),
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
@@ -385,21 +412,26 @@ def fastvit_s12(
     """
     Instantiate FastViT-S12 model variant or feature extractor with optional pretrained weights.
 
-    Params:
-        pretrained: (bool) Whether to load pretrained weights
 
-        inference_mode: (bool) Whether to load fused fastvit model
+    Args:
+        pretrained (bool): Whether to load pretrained weights
 
-        num_classes: (int) Number of output classes
+        inference_mode (bool): Whether to load fused fastvit model
 
-        include_top: (bool) Whether to include the classification layers
+        num_classes (int): Number of output classes
 
-        input_shape: (tuple) Input shape -> H, W, C
+        include_top (bool): Whether to include the classification layers
 
-        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-        cache_dir: (str) Local directory to cache the downloaded weights
+        input_shape (tuple): Input shape -> H, W, C
 
+        load_kd_weights (bool): Load knowledge distillation trained model weights if `pretrained=True`.
+
+        cache_dir (str): Local directory to cache the downloaded weights
+
+    Returns:
+        keras.Model: The constructed fastvit-s12 keras model instance.
     """
 
     layers = [2, 2, 6, 2]
@@ -416,10 +448,12 @@ def fastvit_s12(
         mlp_ratios=mlp_ratios,
         downsamples=downsamples,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name="fastvit_t12",
         inference_mode=inference_mode,
     )
+
     if pretrained:
         model = _load_weights(
             model=model,
@@ -437,6 +471,7 @@ def fastvit_sa12(
     inference_mode=False,
     num_classes=1000,
     include_top: bool = True,
+    classifier_head_activation: str = "linear",
     input_shape=(None, None, 3),
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
@@ -444,21 +479,25 @@ def fastvit_sa12(
     """
     Instantiate FastViT-SA12 model variant or feature extractor with optional pretrained weights.
 
-    Params:
-        pretrained: (bool) Whether to load pretrained weights
+    Args:
+        pretrained (bool): Whether to load pretrained weights
 
-        inference_mode: (bool) Whether to load fused fastvit model
+        inference_mode (bool): Whether to load fused fastvit model
 
-        num_classes: (int) Number of output classes
+        num_classes (int): Number of output classes
 
-        include_top: (bool) Whether to include the classification layers
+        include_top (bool): Whether to include the classification layers
 
-        input_shape: (tuple) Input shape -> H, W, C
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+        input_shape (tuple): Input shape -> H, W, C
 
-        cache_dir: (str) Local directory to cache the downloaded weights
+        load_kd_weights (bool): Load knowledge distillation trained model weights if `pretrained=True`.
 
+        cache_dir (str): Local directory to cache the downloaded weights
+
+    Returns:
+        keras.Model: The constructed fastvit-sa12 keras model instance.
     """
 
     layers = [2, 2, 6, 2]
@@ -477,6 +516,7 @@ def fastvit_sa12(
         mlp_ratios=mlp_ratios,
         downsamples=downsamples,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name="fastvit_sa12",
         inference_mode=inference_mode,
@@ -499,6 +539,7 @@ def fastvit_sa24(
     inference_mode=False,
     num_classes=1000,
     include_top: bool = True,
+    classifier_head_activation: str = "linear",
     input_shape=(None, None, 3),
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
@@ -506,21 +547,25 @@ def fastvit_sa24(
     """
     Instantiate FastViT-SA24 model variant or feature extractor with optional pretrained weights.
 
-    Params:
-        pretrained: (bool) Whether to load pretrained weights
+    Args:
+        pretrained (bool): Whether to load pretrained weights
 
-        inference_mode: (bool) Whether to load fused fastvit model
+        inference_mode (bool): Whether to load fused fastvit model
 
-        num_classes: (int) Number of output classes
+        num_classes (int): Number of output classes
 
-        include_top: (bool) Whether to include the classification layers
+        include_top (bool): Whether to include the classification layers
 
-        input_shape: (tuple) Input shape -> H, W, C
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+        input_shape (tuple): Input shape -> H, W, C
 
-        cache_dir: (str) Local directory to cache the downloaded weights
+        load_kd_weights (bool): Load knowledge distillation trained model weights if `pretrained=True`.
 
+        cache_dir (str): Local directory to cache the downloaded weights
+
+    Returns:
+        keras.Model: The constructed fastvit-sa24 keras model instance.
     """
 
     layers = [4, 4, 12, 4]
@@ -539,10 +584,12 @@ def fastvit_sa24(
         mlp_ratios=mlp_ratios,
         downsamples=downsamples,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name="fastvit_sa24",
         inference_mode=inference_mode,
     )
+
     if pretrained:
         model = _load_weights(
             model=model,
@@ -551,6 +598,7 @@ def fastvit_sa24(
             cache_dir=cache_dir,
             inference_mode=inference_mode,
         )
+
     return model
 
 
@@ -559,6 +607,7 @@ def fastvit_sa36(
     inference_mode=False,
     num_classes=1000,
     include_top: bool = True,
+    classifier_head_activation: str = "linear",
     input_shape=(None, None, 3),
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
@@ -566,23 +615,26 @@ def fastvit_sa36(
     """
     Instantiate FastViT-SA36 model variant or feature extractor with optional pretrained weights.
 
-    Params:
-        pretrained: (bool) Whether to load pretrained weights
+    Args:
+        pretrained (bool): Whether to load pretrained weights
 
-        inference_mode: (bool) Whether to load fused fastvit model
+        inference_mode (bool): Whether to load fused fastvit model
 
-        num_classes: (int) Number of output classes
+        num_classes (int): Number of output classes
 
-        include_top: (bool) Whether to include the classification layers
+        include_top (bool): Whether to include the classification layers
 
-        input_shape: (tuple) Input shape -> H, W, C
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+        input_shape (tuple): Input shape -> H, W, C
 
-        cache_dir: (str) Local directory to cache the downloaded weights
+        load_kd_weights (bool): Load knowledge distillation trained model weights if `pretrained=True`.
 
+        cache_dir (str): Local directory to cache the downloaded weights
+
+    Returns:
+        keras.Model: The constructed fastvit-sa36 keras model instance.
     """
-
     layers = [6, 6, 18, 6]
     embed_dims = [64, 128, 256, 512]
     mlp_ratios = [4, 4, 4, 4]
@@ -600,10 +652,12 @@ def fastvit_sa36(
         downsamples=downsamples,
         layer_scale_init_value=1e-6,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name="fastvit_sa36",
         inference_mode=inference_mode,
     )
+
     if pretrained:
         model = _load_weights(
             model=model,
@@ -621,6 +675,7 @@ def fastvit_ma36(
     inference_mode=False,
     num_classes=1000,
     include_top: bool = True,
+    classifier_head_activation: str = "linear",
     input_shape=(None, None, 3),
     load_kd_weights: bool = False,
     cache_dir: Optional[str] = None,  # Local cache directory for weights
@@ -628,21 +683,25 @@ def fastvit_ma36(
     """
     Instantiate FastViT-MA36 model variant or feature extractor with optional pretrained weights.
 
-    Params:
-        pretrained: (bool) Whether to load pretrained weights
+    Args:
+        pretrained (bool): Whether to load pretrained weights
 
-        inference_mode: (bool) Whether to load fused fastvit model
+        inference_mode (bool): Whether to load fused fastvit model
 
-        num_classes: (int) Number of output classes
+        num_classes (int): Number of output classes
 
-        include_top: (bool) Whether to include the classification layers
+        include_top (bool): Whether to include the classification layers
 
-        input_shape: (tuple) Input shape -> H, W, C
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-        load_kd_weights: (bool) Load knowledge distillation trained model weights if `pretrained=True`.
+        input_shape (tuple): Input shape -> H, W, C
 
-        cache_dir: (str) Local directory to cache the downloaded weights
+        load_kd_weights (bool): Load knowledge distillation trained model weights if `pretrained=True`.
 
+        cache_dir (str): Local directory to cache the downloaded weights
+
+    Returns:
+        keras.Model: The constructed fastvit-ma46 keras model instance.
     """
 
     layers = [6, 6, 18, 6]
@@ -662,6 +721,7 @@ def fastvit_ma36(
         downsamples=downsamples,
         layer_scale_init_value=1e-6,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name="fastvit_ma36",
         inference_mode=inference_mode,
@@ -675,6 +735,7 @@ def fastvit_ma36(
             cache_dir=cache_dir,
             inference_mode=inference_mode,
         )
+
     return model
 
 
