@@ -10,8 +10,7 @@ from .configs import get_mobile_vit_v2_configs
 from .base_layers import ConvLayer, InvertedResidualBlock
 from .mobile_vit_v2_block import MobileViT_v2_Block
 
-WEIGHTS_RELEASE_TAG_VERSION = 0.5
-WEIGHTS_URL = "https://github.com/veb-101/keras-vision/releases/download/v{weight_release_tag}/{file_name}"
+WEIGHTS_URL = r"https://huggingface.co/veb-101/Keras-3-apple-mobilevit/resolve/main/keras-3-mobilevit-v2-weights/{file_name}"
 
 
 def MobileViT_v2(
@@ -261,7 +260,7 @@ def build_MobileViT_v2(
     if pretrained:
         weights_path = utils.get_file(
             fname=pretrained_weight_name,
-            origin=WEIGHTS_URL.format(weight_release_tag=WEIGHTS_RELEASE_TAG_VERSION, file_name=pretrained_weight_name),
+            origin=WEIGHTS_URL.format(file_name=pretrained_weight_name),
             cache_subdir="models",
             hash_algorithm="auto",
             extract=False,
