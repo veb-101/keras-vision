@@ -2,8 +2,8 @@ import warnings
 from typing import Optional
 import numpy as np
 from keras import Model, Input
-from keras.layers import GlobalAveragePooling2D, Dropout, Dense
-from keras.utils import get_file
+from keras import layers as keras_layer
+from keras import utils
 
 
 from .configs import get_mobile_vit_v2_configs
@@ -20,52 +20,45 @@ def MobileViT_v2(
     attention_drop: float = 0.0,
     dropout: float = 0.0,
     num_classes: int | None = 1000,
+    classifier_head_activation: str = "linear",  # linear
     input_shape: tuple[int, int, int] = (256, 256, 3),
     model_name: str = "MobileViT-v2-1.0",
 ):
     """
     Build the MobileViT-v2 model architecture.
 
-    Parameters
-    ----------
-    configs : object
-        A dataclass instance containing model information such as per-layer output channels, transformer embedding dimensions, transformer repeats, and IR expansion factor.
+    Args:
+        configs (dataclass): A dataclass instance containing model information such as per-layer output channels, transformer embedding dimensions, transformer repeats, and IR expansion factor.
 
-    linear_drop : float, optional
-        Dropout rate for the Dense layers. Default is 0.0.
+        linear_drop (float): Dropout rate for the Dense layers. Default is 0.0.
 
-    attention_drop : float, optional
-        Dropout rate for the attention matrix. Default is 0.0.
+        attention_drop (float): Dropout rate for the attention matrix. Default is 0.0.
 
-    dropout : float, optional
-        Dropout rate to be applied between different layers. Default is 0.0.
+        dropout (float): Dropout rate to be applied between different layers. Default is 0.0.
 
-    num_classes : int, optional
-        The number of output classes for the classification task. If None, no classification layer is added. Default is 1000.
+        num_classes (int): The number of output classes for the classification task. If None, no classification layer is added. Default is 1000.
 
-    input_shape : tuple of int, optional
-        The shape of the input data in the format (height, width, channels). Default is (256, 256, 3).
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-    model_name : str, optional
-        The name of the model. Default is "MobileViT-v3-1.0".
+        input_shape (tuple): The shape of the input data in the format (height, width, channels). Default is (256, 256, 3).
 
-    Returns
-    -------
-    model : keras.Model
-        The constructed MobileViT-v2 model instance.
+        model_name (str): The name of the model. Default is "MobileViT-v2-1.0".
+
+    Returns:
+        keras.Model: The constructed MobileViT-v2 model instance.
 
     Example
     -------
     >>> configs = get_mobile_vit_v2_configs(width_multiplier=1.0)
     >>> model = MobileViT_v2(
-    >>>     configs=configs,
-    >>>     linear_drop=0.1,
-    >>>     attention_drop=0.1,
-    >>>     dropout=0.2,
-    >>>     num_classes=1000,
-    >>>     input_shape=(256, 256, 3),
-    >>>     model_name="MobileViT-v2-1.0"
-    >>> )
+           configs=configs,
+           linear_drop=0.1,
+           attention_drop=0.1,
+           dropout=0.2,
+           num_classes=1000,
+           input_shape=(256, 256, 3),
+           model_name="MobileViT-v2-1.0"
+        )
     >>> model.summary()
     """
 
@@ -177,12 +170,13 @@ def MobileViT_v2(
 
     if num_classes:
         # Output layer
-        out = GlobalAveragePooling2D()(out)
+        out = keras_layer.GlobalAveragePooling2D()(out)
 
         if linear_drop > 0.0:
-            out = Dropout(rate=dropout)(out)
+            out = keras_layer.Dropout(rate=dropout)(out)
 
-        out = Dense(units=num_classes)(out)
+        out = keras_layer.Dense(units=num_classes)(out)
+        out = keras_layer.Activation(activation=classifier_head_activation, name=f"Activation('{classifier_head_activation}')")(out)
 
     model = Model(inputs=input_layer, outputs=out, name=model_name)
 
@@ -192,6 +186,7 @@ def MobileViT_v2(
 def build_MobileViT_v2(
     width_multiplier: float = 1.0,
     num_classes: int = 1000,
+    classifier_head_activation: str = "linear",
     input_shape: tuple = (256, 256, 3),
     include_top: bool = True,  # Whether to include the classification layer in the model
     pretrained: bool = False,  # Whether to load pretrained weights
@@ -203,57 +198,43 @@ def build_MobileViT_v2(
     """
     Build a MobileViT-v2 classification model.
 
-    Parameters
-    ----------
-    width_multiplier : float, optional
-        A multiplier for the width (number of channels) of the model layers. Default is 1.0,
-        which corresponds to the base model.
+    Args:
+        width_multiplier (float): A multiplier for the width (number of channels) of the model layers. Default is 1.0, which corresponds to the base model.
 
-    num_classes : int, optional
-        The number of output classes for the classification task. Default is 1000.
+        num_classes (int): Number of output classes
 
-    input_shape : tuple, optional
-        The shape of the input data in the format (height, width, channels). Default is (256, 256, 3).
+        classifier_head_activation (str): Activation function to use after the final dense layer in classification head. Default: "linear". Other options include: "softmax", "sigmoid", etc.
 
-    include_top : bool, optional
-        Whether to include the fully-connected layer at the top of the network. Default is True.
+        input_shape (tuple): Input shape -> H, W, C
 
-    pretrained : bool, optional
-        Whether to load pretrained weights for the model. Default is False.
+        include_top (bool): Whether to include the classification layers
 
-    cache_dir : str, optional
-        Directory to cache the pretrained weights. Default is None.
+        pretrained (bool): Whether to load pretrained weights
 
-    updates : dict, optional
-        A dictionary of updates to modify the base model configuration. Default is None.
+        cache_dir (str): Local directory to cache the downloaded weights
 
-    pretrained_weight_name : str, optional
-        The name of the file containing the pretrained weights. Default is "keras_mobilevitv2-im1k-256-0.5.weights.h5".
+        updates (dict): a key-value pair indicating the changes to be made to the base model.
 
-    **kwargs : dict, optional
-        Additional keyword arguments for model customization. These can include:
-        - linear_drop : float, optional
-            Dropout rate for Dense layers.
-        - attention_drop : float, optional
-            Dropout rate for the attention matrix.
-        - dropout : float, optional
-            Dropout rate for in-between different layers
+        pretrained_weight_name (str): The name of the file containing the pretrained weights. Default is "keras_mobilevitv2-im1k-256-0.5.weights.h5".
 
-    Returns
-    -------
-    model : keras.Model
-        The constructed MobileViT-v2 model instance.
+    Optional Args
+    ---------
+        linear_drop (float): Dropout rate for Dense layers
+        attention_drop (float): Dropout rate for the attention matrix
+        dropout (float): Dropout rate for in-between different layers
+
+    Returns:
+        keras.Model: The constructed MobileViT-v2 model instance.
 
     Example
     -------
     >>> model = build_MobileViT_v2(
-    >>>     width_multiplier=1.0,
-    >>>     num_classes=1000,
-    >>>     input_shape=(256, 256, 3),
-    >>>     include_top=True,
-    >>>     pretrained=True,
-    >>>     cache_dir='/path/to/cache'
-    >>> )
+            width_multiplier=1.0,
+            num_classes=1000,
+            input_shape=(256, 256, 3),
+            include_top=True,
+            pretrained=True,
+        )
     >>> model.summary()
     """
 
@@ -263,6 +244,7 @@ def build_MobileViT_v2(
     model = MobileViT_v2(
         configs=updated_configs,
         num_classes=num_classes if include_top else None,
+        classifier_head_activation=classifier_head_activation,
         input_shape=input_shape,
         model_name=f"MobileViT-v2-{width_multiplier}",
         **kwargs,
@@ -277,7 +259,7 @@ def build_MobileViT_v2(
     model(np.random.randn(*dummy_input_shape), training=False)
 
     if pretrained:
-        weights_path = get_file(
+        weights_path = utils.get_file(
             fname=pretrained_weight_name,
             origin=WEIGHTS_URL.format(weight_release_tag=WEIGHTS_RELEASE_TAG_VERSION, file_name=pretrained_weight_name),
             cache_subdir="models",
@@ -287,16 +269,15 @@ def build_MobileViT_v2(
             cache_dir=cache_dir,
         )
 
-        with warnings.catch_warnings():
-            # Ignore UserWarnings within this block
-            warnings.simplefilter("ignore", UserWarning)
-            model.load_weights(weights_path, skip_mismatch=True)
+        # with warnings.catch_warnings():
+        #     # Ignore UserWarnings within this block
+        #     warnings.simplefilter("ignore", UserWarning)
+        model.load_weights(weights_path, skip_mismatch=True)
 
     return model
 
 
 if __name__ == "__main__":
-
     model = build_MobileViT_v2(
         width_multiplier=0.75,
         input_shape=(None, None, 3),
