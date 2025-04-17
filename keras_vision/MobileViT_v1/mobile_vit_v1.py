@@ -173,7 +173,7 @@ def MobileViT_v1(
             out = keras_layer.Dropout(rate=dropout)(out)
 
         out = keras_layer.Dense(units=num_classes, activation=classifier_head_activation)(out)
-        out = keras_layer.Activation(activation=classifier_head_activation, name=f"Activation('{classifier_head_activation}')")(out)
+        out = keras_layer.Activation(activation=classifier_head_activation, name=f"{classifier_head_activation}")(out)
 
     model = Model(inputs=input_layer, outputs=out, name=model_name)
 

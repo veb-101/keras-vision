@@ -188,7 +188,7 @@ def build_fastvit(
                 bias_initializer=bias_initializer,
                 name="head",
             )
-            head = keras_layer.Activation(activation=classifier_head_activation, name=f"Activation('{classifier_head_activation}')")
+            head = keras_layer.Activation(activation=classifier_head_activation, name=f"{classifier_head_activation}")
         else:
             head = keras_layer.Identity(name="head")
 
