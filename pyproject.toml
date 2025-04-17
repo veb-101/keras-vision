@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "keras-vision"
-version = "0.6.2"
+version = "0.6.3"
 description = "Building Vision models in Keras3 for framework-agnostic training and inference."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
