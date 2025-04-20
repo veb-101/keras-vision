@@ -126,3 +126,32 @@ pip install git+https://github.com/veb-101/keras-vision.git
       </tr>
    </tbody>
 </table>
+
+
+## Citation
+
+* MobileViT-v1
+
+```
+@inproceedings{mehta2022mobilevit,
+     title={MobileViT: Light-weight, General-purpose, and Mobile-friendly Vision Transformer},
+     author={Sachin Mehta and Mohammad Rastegari},
+     booktitle={International Conference on Learning Representations},
+     year={2022}
+}
+```
+
+* MobileViT-v2
+```
+Mehta, S., & Rastegari, M. (2022). Separable Self-attention for Mobile Vision Transformers. ArXiv. https://arxiv.org/abs/2206.02680
+```
+
+* FastViT
+```
+@inproceedings{vasufastvit2023,
+  author = {Pavan Kumar Anasosalu Vasu and James Gabriel and Jeff Zhu and Oncel Tuzel and Anurag Ranjan},
+  title = {FastViT:  A Fast Hybrid Vision Transformer using Structural Reparameterization},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
+  year = {2023}
+}
+```
